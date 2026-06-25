@@ -4,18 +4,31 @@
 
 Phase 1 — Foundation and Static Hebrew RTL Dashboard
 
+### Phase Breakdown
+
+- **Phase 1A: Clean App Foundation** — COMPLETED, ready for Product QA
+- **Phase 1B: Static Dashboard UI** — NOT STARTED, pending external mockup approval
+
 ## Status
 
-Not Started
+Phase 1A: Complete (foundation implemented and tested)
+Phase 1B: Not Started (dashboard design pending)
 
 ## Context
 
-This phase builds the first implementation foundation for MyBalance.
+This phase builds the implementation foundation for MyBalance in two sub-phases:
 
-The app should prove the core experience:
+### Phase 1A (Completed)
+Establishes the core infrastructure:
+- Locale-aware routing (Hebrew-first, RTL-first)
+- next-intl integration for i18n
+- Translation message files (English and Hebrew)
+- Locale direction handling
+- Formatting helpers (currency, date, percent, number, month)
+- Minimal placeholder page confirming foundation works
 
-A user opens MyBalance and immediately understands:
-
+### Phase 1B (Pending)
+Static dashboard UI with mock data showing:
 - Total net worth
 - Total assets
 - Total liabilities
@@ -25,86 +38,118 @@ A user opens MyBalance and immediately understands:
 - Major liability categories
 - Recent snapshots / freshness indicators
 
-Use mock data only.
+**Note:** Dashboard UI will use mock data only and is not started until external mockup is approved.
 
-## Required Reading Before Implementation
+## Phase 1A: Built (Complete)
 
-Claude must read:
+### Infrastructure
+- Next.js App Router with TypeScript
+- next-intl library with `localePrefix: "as-needed"` configuration
+- Middleware for locale detection and routing
+- Root path `/` serves Hebrew directly (unprefixed, canonical)
+- Locale-aware route structure for (/he, /en):
+  - [locale]/layout.tsx — locale-specific layout and lang/dir attributes
+  - [locale]/page.tsx — locale-specific content
+- Root layout.tsx — serves Hebrew as default for root path
 
-- `Context/README.md`
-- `Context/CLAUDE.md`
-- `Context/project-overview.md`
-- `Context/product-lead-workflow.md`
-- `Context/coding-standards.md`
-- `Context/i18n-and-localization.md`
-- `Context/security-and-privacy.md`
-- `Context/current-feature.md`
-- `Context/Features/dashboard-feature-spec.md`
+### Internationalization
+- Translation message files (src/messages/he.json, src/messages/en.json)
+- Direction mapping (rtl for Hebrew, ltr for English)
+- All UI text sourced from translation files
+- No hardcoded text in components
 
-## Build in This Phase
+### Helpers & Utilities
+- Locale direction helper (getDirection)
+- Formatting helpers:
+  - formatCurrency (default: ILS)
+  - formatPercent
+  - formatDate
+  - formatNumber
+  - formatMonth
+- Default locale: he-IL
+- Default currency: ILS
 
-- Next.js App Router foundation
-- TypeScript
-- Tailwind CSS
-- Hebrew-first UI
-- RTL-first layout
-- Locale-aware structure
-- Translation/message files
-- Mock financial data
-- App shell
+### UI
+- Minimal placeholder page
+- Product name: MyBalance
+- Subtitle from translations
+- Foundation description
+- No dashboard cards, charts, or financial data
+- Clean informational wording (no financial advice)
+
+## Phase 1B: To Build (Not Started, Pending)
+
+Will add (pending external mockup approval):
+- Dashboard summary cards
+- Net worth display
+- Asset/liability overview
+- Charts and visualizations
 - Sidebar/navigation
 - Top bar/header
-- Dashboard summary cards
-- Net worth chart
-- Allocation chart
-- Asset category breakdown
-- Liability category breakdown
-- Recent snapshots / data freshness section
+- Mock financial data display
 
-## Do Not Build in This Phase
+### Do Not Build in Phase 1B
 
-- Real database persistence
-- Prisma schema changes
-- Authentication
-- CRUD forms
-- Pension/Gemel API sync
-- Open Banking
-- AI recommendations
-- Import/export
-- Admin settings
-- User roles
-- Billing
-- Production deployment configuration
+- Real database persistence (Phase 3+)
+- Prisma schema changes (Phase 3+)
+- Authentication (Phase 3+)
+- CRUD forms (Phase 3+)
+- Pension/Gemel API sync (Phase 4+)
+- Open Banking (Phase 4+)
+- AI recommendations (Phase 5+)
+- Import/export (Phase 4+)
+- Admin settings (Phase 6+)
+- User roles (Phase 6+)
+- Billing (Phase 6+)
+- Production deployment (Phase 7)
 
-## Acceptance Criteria
+## Phase 1A Acceptance Criteria (MET ✓)
 
-- App runs locally.
-- Dashboard displays Hebrew UI.
-- Layout is RTL.
-- All user-facing text comes from translation messages.
-- Mock data renders correctly.
-- Layout works on desktop and basic mobile widths.
-- No financial advice language appears.
-- No DB/API/Auth implementation is added.
+- ✓ App runs locally with `npm run dev`
+- ✓ `/` (root) displays Hebrew UI with RTL direction (unprefixed, canonical path)
+- ✓ `/he` displays Hebrew UI with RTL direction (locale-specific route)
+- ✓ `/en` displays English UI with LTR direction (locale-specific route)
+- ✓ All user-facing text comes from translation files
+- ✓ HTML lang and dir attributes set correctly for each route
+- ✓ Layout works on desktop and mobile widths
+- ✓ No financial advice language appears
+- ✓ No DB/API/Auth/Dashboard implementation added
+- ✓ No runtime errors on routes
+- ✓ ESLint, TypeScript, build all pass
 
-## QA Requirements
+## Phase 1B Acceptance Criteria (NOT STARTED)
 
-Run available checks:
+To be updated when Phase 1B begins:
+- Dashboard displays with Hebrew UI and RTL
+- Summary cards show total net worth, assets, liabilities
+- Charts render correctly
+- Mock financial data displays appropriately
+- No real data persistence or authentication
 
-- `npm run lint`
-- `npm run build`
-- `npm run typecheck` if available
+## QA Requirements — Phase 1A (COMPLETED)
 
-Perform browser QA if possible.
+Checks run:
+- ✓ `npm run lint` — passed
+- ✓ `npm run build` — successful
+- ✓ `npx tsc --noEmit` — no errors
+
+Browser QA performed:
+- ✓ `/` renders with Hebrew and RTL (direct, no redirect)
+- ✓ `/` has lang="he" and dir="rtl" attributes
+- ✓ `/he` renders with Hebrew and RTL
+- ✓ `/he` has lang="he" and dir="rtl" attributes
+- ✓ `/en` renders with English and LTR
+- ✓ `/en` has lang="en" and dir="ltr" attributes
+- ✓ No runtime errors
 
 ## Documentation Checklist
 
-Before reporting completion, Claude must check whether these need updates:
+Updated for Phase 1A:
+- ✓ `Context/current-feature.md` — Updated to reflect unprefixed Hebrew at root and new routing structure
+- ✓ `Context/i18n-and-localization.md` — Updated to document unprefixed Hebrew at root and localePrefix: "as-needed"
 
-- `Context/current-feature.md`
-- `Context/Features/dashboard-feature-spec.md`
-- `Context/i18n-and-localization.md`
-- `Context/coding-standards.md`
-- `Context/security-and-privacy.md`
+Checked but not updated:
+- `Context/coding-standards.md` — Standards being followed
+- `Context/security-and-privacy.md` — No security/privacy issues in Phase 1A
 
-Report all MD files changed.
+No changes needed to `Context/Features/dashboard-feature-spec.md` — Dashboard not started yet.

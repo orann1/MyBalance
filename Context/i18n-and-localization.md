@@ -19,8 +19,10 @@ Future direction:
 ## Required Behavior
 
 - Hebrew is the default UI language.
-- The root route should redirect to Hebrew.
-- The app should support locale-aware routes from the beginning.
+- The root path `/` serves Hebrew content directly without a locale prefix (e.g., not `/he`).
+- English is accessible under the `/en` prefix.
+- Hebrew is also accessible under `/he` for explicit locale selection.
+- The app supports locale-aware routes from the beginning.
 - English support may be incomplete in the MVP, but the architecture must support it.
 - All user-facing text must come from translation files.
 
@@ -50,15 +52,22 @@ src/
 
 ```txt
 app/
+├── layout.tsx           # Root layout (sets lang="he" dir="rtl" for default)
+├── page.tsx             # Root page renders Hebrew (/) without prefix
 └── [locale]/
-    ├── layout.tsx
-    ├── page.tsx
+    ├── layout.tsx       # Locale-specific layout (sets lang/dir per locale)
+    ├── page.tsx         # Locale-specific pages (/en, /he)
     ├── accounts/
     ├── assets/
     ├── liabilities/
     ├── goals/
     └── settings/
 ```
+
+Routing structure:
+- `/` → Hebrew via root page (unprefixed, canonical)
+- `/he` → Hebrew via [locale] page
+- `/en` → English via [locale] page
 
 ## HTML Direction
 

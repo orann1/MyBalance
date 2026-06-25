@@ -1,7 +1,13 @@
 import { createTranslation } from "@/lib/locale/get-translations";
+import type { Locale } from "@/i18n/config";
 
-export default async function RootPage() {
-  const t = createTranslation("he");
+export default async function HomePage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  const t = createTranslation(locale as Locale);
 
   return (
     <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 dark:bg-black px-4">
