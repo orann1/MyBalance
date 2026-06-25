@@ -1,5 +1,6 @@
 import { createTranslation } from "@/lib/locale/get-translations";
 import type { Locale } from "@/i18n/config";
+import { redirect } from "next/navigation";
 
 export default async function HomePage({
   params,
@@ -7,6 +8,11 @@ export default async function HomePage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+
+  if (locale === "he") {
+    redirect("/");
+  }
+
   const t = createTranslation(locale as Locale);
 
   return (

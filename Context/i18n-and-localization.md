@@ -19,9 +19,9 @@ Future direction:
 ## Required Behavior
 
 - Hebrew is the default UI language.
-- The root path `/` serves Hebrew content directly without a locale prefix (e.g., not `/he`).
+- The root path `/` serves Hebrew content directly without a locale prefix (canonical Hebrew route).
 - English is accessible under the `/en` prefix.
-- Hebrew is also accessible under `/he` for explicit locale selection.
+- The `/he` path redirects to `/` (no separate Hebrew-prefixed route).
 - The app supports locale-aware routes from the beginning.
 - English support may be incomplete in the MVP, but the architecture must support it.
 - All user-facing text must come from translation files.
@@ -65,9 +65,9 @@ app/
 ```
 
 Routing structure:
-- `/` → Hebrew via root page (unprefixed, canonical)
-- `/he` → Hebrew via [locale] page
+- `/` → Hebrew via root page (unprefixed, canonical Hebrew route)
 - `/en` → English via [locale] page
+- `/he` → redirects to `/` (no separate Hebrew-prefixed route)
 
 ## HTML Direction
 

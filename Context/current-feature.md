@@ -107,7 +107,7 @@ Will add (pending external mockup approval):
 
 - ✓ App runs locally with `npm run dev`
 - ✓ `/` (root) displays Hebrew UI with RTL direction (unprefixed, canonical path)
-- ✓ `/he` displays Hebrew UI with RTL direction (locale-specific route)
+- ✓ `/he` redirects to `/` (no separate Hebrew-prefixed route)
 - ✓ `/en` displays English UI with LTR direction (locale-specific route)
 - ✓ All user-facing text comes from translation files
 - ✓ HTML lang and dir attributes set correctly for each route
@@ -136,8 +136,7 @@ Checks run:
 Browser QA performed:
 - ✓ `/` renders with Hebrew and RTL (direct, no redirect)
 - ✓ `/` has lang="he" and dir="rtl" attributes
-- ✓ `/he` renders with Hebrew and RTL
-- ✓ `/he` has lang="he" and dir="rtl" attributes
+- ✓ `/he` redirects to `/` (307 redirect)
 - ✓ `/en` renders with English and LTR
 - ✓ `/en` has lang="en" and dir="ltr" attributes
 - ✓ No runtime errors
