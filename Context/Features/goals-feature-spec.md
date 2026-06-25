@@ -1,0 +1,55 @@
+# Goals Feature Spec
+
+## Goal
+
+Allow users to define and track financial goals.
+
+## Goal Types
+
+- Net worth target
+- Liquidity target
+- Debt reduction target
+- Allocation target
+- Custom target
+
+## Initial Scope
+
+Planned after snapshots.
+
+## UI
+
+Goals should show:
+- Target
+- Current value
+- Progress percentage
+- Target date
+- Status
+
+## Implementation Rules for AI Agents
+
+Before implementing this feature, read:
+
+- `Context/README.md`
+- `Context/CLAUDE.md`
+- `Context/project-overview.md`
+- `Context/product-lead-workflow.md`
+- `Context/coding-standards.md`
+- `Context/i18n-and-localization.md`
+- `Context/security-and-privacy.md`
+- `Context/current-feature.md`
+- This feature spec
+
+Development rules:
+
+- Keep changes incremental.
+- Preserve Hebrew-first and RTL-first behavior.
+- Do not hardcode user-facing UI strings.
+- Do not add DB/schema changes unless explicitly in scope.
+- Do not add external APIs unless explicitly in scope.
+- Do not add financial advice language.
+- Run relevant checks before completion.
+- Do not commit without user approval.
+
+## Documentation Impact
+
+If this feature changes behavior, update this spec and any related docs listed in `Context/README.md`.
