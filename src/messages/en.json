@@ -14,7 +14,7 @@
     "assets": "Assets",
     "liabilities": "Liabilities",
     "snapshots": "Snapshots",
-    "pensionGemel": "Pension & Gemel",
+    "managedSavings": "Managed Savings",
     "goals": "Goals",
     "importExport": "Import/Export",
     "settings": "Settings",
@@ -83,5 +83,226 @@
     "liquidityStable": "Current liquidity level appears stable per sample data",
     "liabilityTracking": "Worth monitoring liability data freshness",
     "disclaimer": "Public pension returns do not replace personal balance"
+  },
+  "pensionGemel": {
+    "pageTitle": "Pension & Gemel",
+    "pageSubtitle": "Pension, Keren Hishtalmut, Kupat Gemel, Gemel LeHashkaa and savings policies",
+    "customHorizon": "Custom horizon:",
+    "years": "years",
+    "projectionsLabel": "Future Projections",
+    "sections": {
+      "pensionTitle": "Pension",
+      "managedSavingsTitle": "Managed Savings"
+    },
+    "tableColumns": {
+      "name": "Investment Name",
+      "type": "Type",
+      "currentBalance": "Current Balance",
+      "monthlyContribution": "Monthly Contribution",
+      "accumulationFee": "Accumulation Fee",
+      "depositFee": "Deposit Fee",
+      "in10Years": "In 10 Years",
+      "estimatedMonthlyPension": "Est. Monthly Pension"
+    },
+    "summaryCards": {
+      "totalCurrentValue": "Total Current Value",
+      "totalMonthlyContributions": "Total Monthly Contributions",
+      "projectedIn10Years": "Projected in 10 Years",
+      "projectedInCustomYears": "Projected in {years} Years",
+      "estimatedMonthlyPension": "Est. Monthly Pension"
+    },
+    "summaryTables": {
+      "today": "Today",
+      "in1Year": "In 1 Year",
+      "in5Years": "In 5 Years",
+      "in10Years": "In 10 Years",
+      "in15Years": "In 15 Years",
+      "inCustomYears": "In {years} Years",
+      "accumulatedValueTitle": "Accumulated Value Summary",
+      "pensionSummaryTitle": "Pension Summary",
+      "period": "Period",
+      "pension": "Pension",
+      "hishtalmut": "Keren Hishtalmut",
+      "gemel": "Kupat Gemel",
+      "hashkaa": "Gemel LeHashkaa",
+      "savings": "Savings Policy",
+      "total": "Total",
+      "monthlyPension": "Monthly Pension"
+    },
+    "expandedView": {
+      "investmentDetails": "Investment Details",
+      "editableInputs": "Editable Inputs",
+      "name": "Name",
+      "owner": "Owner",
+      "productType": "Product Type",
+      "managingCompany": "Managing Company",
+      "track": "Track",
+      "fundId": "Fund ID",
+      "lastUpdate": "Last Update",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "retirementAge": "Retirement Age",
+      "pensionConversionFactor": "Pension Conversion Factor",
+      "publicTrackPerformance": "Public Track Performance",
+      "detailedSimulation": "Detailed Simulation",
+      "performance": {
+        "lastMonth": "Last Month",
+        "last1Year": "Last 1 Year",
+        "last3Years": "Last 3 Years",
+        "last5Years": "Last 5 Years",
+        "last10Years": "Last 10 Years"
+      },
+      "simulation": {
+        "period": "Period",
+        "today": "Today",
+        "projectedValue": "Projected Value",
+        "totalContributions": "Total Contributions",
+        "estimatedFees": "Estimated Fees",
+        "estimatedNetGain": "Estimated Net Gain",
+        "estimatedMonthlyPension": "Est. Monthly Pension"
+      }
+    },
+    "ownerLabels": {
+      "self": "Self",
+      "spouse": "Spouse",
+      "child": "Child",
+      "shared": "Shared",
+      "family": "Family",
+      "other": "Other"
+    },
+    "disclaimers": {
+      "informational": "This information is for display purposes only and is based on manually entered values",
+      "noAdvice": "MyBalance does not provide financial or pension advice",
+      "publicData": "Public performance data does not reflect personal returns",
+      "simulation": "Simulations are based on estimates and may not match reality"
+    }
+  },
+  "managedSavings": {
+    "pageTitle": "Managed Savings",
+    "pageSubtitle": "Keren Hishtalmut, Kupat Gemel, Gemel LeHashkaa and savings policies",
+    "customHorizon": "Custom horizon:",
+    "years": "years",
+    "projectionsLabel": "Future Projections",
+    "summaryCards": {
+      "totalCurrentValue": "Total Managed Savings",
+      "totalMonthlyContributions": "Total Monthly Contributions",
+      "projectedIn5Years": "Projected in 5 Years",
+      "projectedIn10Years": "Projected in 10 Years",
+      "projectedInCustomYears": "Projected in {years} Years"
+    },
+    "tableColumns": {
+      "name": "Investment Name",
+      "ownership": "Ownership",
+      "type": "Type",
+      "company": "Managing Company",
+      "track": "Track",
+      "currentBalance": "Current Balance",
+      "monthlyContribution": "Monthly Contribution",
+      "accumulationFee": "Accumulation Fee",
+      "depositFee": "Deposit Fee",
+      "last5YearReturn": "5-Year Return",
+      "in1Year": "In 1 Year",
+      "in5Years": "In 5 Years",
+      "in10Years": "In 10 Years",
+      "in15Years": "In 15 Years",
+      "inCustomYears": "In {years} Years",
+      "typeHishtalmut": "Keren Hishtalmut",
+      "typeGemel": "Kupat Gemel",
+      "typeHashkaa": "Gemel LeHashkaa",
+      "typeSavings": "Savings Policy"
+    },
+    "expandedView": {
+      "investmentDetails": "Investment Details",
+      "editableInputs": "Editable Values",
+      "publicTrackPerformance": "Public Track Performance",
+      "detailedSimulation": "Detailed Simulation",
+      "mockActions": "Mock Actions",
+      "name": "Investment Name",
+      "owner": "Owner",
+      "productType": "Product Type",
+      "managingCompany": "Managing Company",
+      "track": "Track Name",
+      "fundId": "Official Fund ID",
+      "lastUpdate": "Last Update",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "performance": {
+        "lastMonth": "Last Month",
+        "last1Year": "Last 1 Year",
+        "last3Years": "Last 3 Years",
+        "last5Years": "Last 5 Years",
+        "last10Years": "Last 10 Years"
+      },
+      "simulation": {
+        "period": "Period",
+        "today": "Today",
+        "projectedValue": "Projected Value",
+        "totalContributions": "Total Contributions",
+        "estimatedFees": "Estimated Fees",
+        "estimatedNetGain": "Estimated Net Gain"
+      },
+      "mockActions": {
+        "updateBalance": "Update Balance",
+        "addDeposit": "Add One-Time Deposit",
+        "changeFees": "Change Fees",
+        "changeTrack": "Change Track"
+      }
+    },
+    "summaryTable": {
+      "title": "Managed Savings Summary",
+      "period": "Period",
+      "today": "Today",
+      "in1Year": "In 1 Year",
+      "in5Years": "In 5 Years",
+      "in10Years": "In 10 Years",
+      "in15Years": "In 15 Years",
+      "inCustomYears": "In {years} Years",
+      "hishtalmut": "Keren Hishtalmut",
+      "gemel": "Kupat Gemel",
+      "hashkaa": "Gemel LeHashkaa",
+      "savings": "Savings Policy",
+      "total": "Total"
+    },
+    "disclaimers": {
+      "informational": "This information is for display purposes only and is based on manually entered values",
+      "noAdvice": "MyBalance does not provide financial advice",
+      "publicData": "Public performance data does not reflect personal returns",
+      "simulation": "Simulations are based on estimates and may not match reality"
+    },
+    "ownerLabels": {
+      "self": "Self",
+      "spouse": "Spouse",
+      "child": "Child",
+      "shared": "Shared",
+      "family": "Family",
+      "other": "Other"
+    },
+    "publicTrackPerformance": "Public Track Performance",
+    "publicDataNote": "These are public track returns, not personal returns.",
+    "lastMonth": "Last Month",
+    "last1Year": "Last 1 Year",
+    "last3Years": "Last 3 Years",
+    "last5Years": "Last 5 Years",
+    "last10Years": "Last 10 Years",
+    "lastUpdated": "Last Updated",
+    "addFundButton": "Add Fund",
+    "modal": {
+      "editFund": "Edit Fund",
+      "editSubtitle": "Update the fund details used for projections",
+      "addFund": "Add Managed Fund",
+      "addSubtitle": "Enter fund details to simulate future accumulation",
+      "cancel": "Cancel",
+      "save": "Save",
+      "add": "Add",
+      "investmentIdentity": "Fund Identity",
+      "fundDetails": "Fund Details",
+      "assumptions": "Your Assumptions",
+      "mockDataNote": "Changes are temporary for this mock experience and will reset after refresh.",
+      "investmentNamePlaceholder": "e.g., My Savings Account",
+      "companyPlaceholder": "e.g., Bank Leumi",
+      "trackPlaceholder": "e.g., Conservative Track"
+    }
   }
 }

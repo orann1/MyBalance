@@ -31,7 +31,7 @@ const navItems: NavItem[] = [
   { key: "assets", href: "/assets", icon: TrendingUp, tint: "bg-[oklch(0.93_0.07_165)] text-[oklch(0.38_0.13_165)]" },
   { key: "liabilities", href: "/liabilities", icon: CreditCard, tint: "bg-[oklch(0.94_0.07_40)] text-[oklch(0.45_0.15_35)]" },
   { key: "snapshots", href: "/snapshots", icon: PieChart, tint: "bg-[oklch(0.93_0.07_300)] text-[oklch(0.42_0.17_300)]" },
-  { key: "pensionGemel", href: "/pension-gemel", icon: Landmark, tint: "bg-[oklch(0.93_0.06_220)] text-[oklch(0.4_0.13_220)]" },
+  { key: "managedSavings", href: "/managed-savings", icon: Landmark, tint: "bg-[oklch(0.93_0.06_220)] text-[oklch(0.4_0.13_220)]" },
   { key: "goals", href: "/goals", icon: Target, tint: "bg-[oklch(0.93_0.08_320)] text-[oklch(0.42_0.18_320)]" },
   { key: "importExport", href: "/import-export", icon: ArrowDownUp, tint: "bg-[oklch(0.94_0.06_140)] text-[oklch(0.4_0.13_150)]" },
   { key: "settings", href: "/settings", icon: Settings, tint: "bg-[oklch(0.94_0.02_280)] text-[oklch(0.4_0.04_280)]" },

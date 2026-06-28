@@ -14,7 +14,7 @@
     "assets": "נכסים",
     "liabilities": "התחייבויות",
     "snapshots": "תמונת הון",
-    "pensionGemel": "פנסיה וגמל",
+    "managedSavings": "חיסכון מנוהל",
     "goals": "יעדים",
     "importExport": "ייבוא וייצוא",
     "settings": "הגדרות",
@@ -83,5 +83,226 @@
     "liquidityStable": "רמת הנזילות הנוכחית נראית יציבה לפי נתוני הדוגמה",
     "liabilityTracking": "כדאי לעקוב אחרי עדכניות נתוני ההתחייבויות",
     "disclaimer": "נתוני תשואות ציבוריים אינם מחליפים יתרה אישית"
+  },
+  "pensionGemel": {
+    "pageTitle": "פנסיה וגמל",
+    "pageSubtitle": "פנסיה, קרנות השתלמות, קופות גמל, גמל להשקעה ופוליסות חיסכון",
+    "customHorizon": "אופק משנה:",
+    "years": "שנים",
+    "projectionsLabel": "הצגות לעתיד",
+    "sections": {
+      "pensionTitle": "פנסיה",
+      "managedSavingsTitle": "חיסכון מנוהל"
+    },
+    "tableColumns": {
+      "name": "שם ההשקעה",
+      "type": "סוג",
+      "currentBalance": "יתרה נוכחית",
+      "monthlyContribution": "תרומה חודשית",
+      "accumulationFee": "עמלת צבירה",
+      "depositFee": "עמלת הפקדה",
+      "in10Years": "בעוד 10 שנים",
+      "estimatedMonthlyPension": "פנסיה חודשית משוערת"
+    },
+    "summaryCards": {
+      "totalCurrentValue": "סך שווי נוכחי",
+      "totalMonthlyContributions": "סך תרומות חודשיות",
+      "projectedIn10Years": "תחזוקה בעוד 10 שנים",
+      "projectedInCustomYears": "תחזוקה בעוד {years} שנים",
+      "estimatedMonthlyPension": "פנסיה חודשית משוערת"
+    },
+    "summaryTables": {
+      "today": "היום",
+      "in1Year": "בעוד שנה",
+      "in5Years": "בעוד 5 שנים",
+      "in10Years": "בעוד 10 שנים",
+      "in15Years": "בעוד 15 שנים",
+      "inCustomYears": "בעוד {years} שנים",
+      "accumulatedValueTitle": "סיכום ערך מצטבר",
+      "pensionSummaryTitle": "סיכום פנסיה",
+      "period": "תקופה",
+      "pension": "פנסיה",
+      "hishtalmut": "קרן השתלמות",
+      "gemel": "קופת גמל",
+      "hashkaa": "גמל להשקעה",
+      "savings": "פוליסה",
+      "total": "סך הכל",
+      "monthlyPension": "פנסיה חודשית"
+    },
+    "expandedView": {
+      "investmentDetails": "פרטי ההשקעה",
+      "editableInputs": "ערכים הניתנים לעריכה",
+      "name": "שם",
+      "owner": "בעלות",
+      "productType": "סוג מוצר",
+      "managingCompany": "חברה מנהלת",
+      "track": "קרן",
+      "fundId": "מזהה קרן",
+      "lastUpdate": "עדכון אחרון",
+      "status": "סטטוס",
+      "active": "פעיל",
+      "inactive": "לא פעיל",
+      "retirementAge": "גיל פרישה",
+      "pensionConversionFactor": "מקדם המרה",
+      "publicTrackPerformance": "ביצועי המסלול הציבוריים",
+      "detailedSimulation": "סימולציה מפורטת",
+      "performance": {
+        "lastMonth": "חודש האחרון",
+        "last1Year": "שנה אחרונה",
+        "last3Years": "3 שנים",
+        "last5Years": "5 שנים",
+        "last10Years": "10 שנים"
+      },
+      "simulation": {
+        "period": "תקופה",
+        "today": "היום",
+        "projectedValue": "ערך משוער",
+        "totalContributions": "סך תרומות",
+        "estimatedFees": "עמלות משוערות",
+        "estimatedNetGain": "רווח נקי משוער",
+        "estimatedMonthlyPension": "פנסיה חודשית משוערת"
+      }
+    },
+    "ownerLabels": {
+      "self": "שלי",
+      "spouse": "בן זוג",
+      "child": "ילד",
+      "shared": "משותף",
+      "family": "משפחתי",
+      "other": "אחר"
+    },
+    "disclaimers": {
+      "informational": "מידע זה להצגה בלבד ובוסיס על ערכים שהוזנו ידנית",
+      "noAdvice": "MyBalance אינו מספק ייעוץ פיננסי או פנסיוני",
+      "publicData": "נתוני הביצוע הציבוריים אינם משקפים תשואה אישית",
+      "simulation": "הסימולציות מבוססות על הנחות מעריכה ועשויות שלא לתאם למציאות"
+    }
+  },
+  "managedSavings": {
+    "pageTitle": "חיסכון מנוהל",
+    "pageSubtitle": "קרנות השתלמות, קופות גמל, גמל להשקעה ופוליסות חיסכון",
+    "customHorizon": "אופק משנה:",
+    "years": "שנים",
+    "projectionsLabel": "הצגות לעתיד",
+    "summaryCards": {
+      "totalCurrentValue": "סך החיסכון המנוהל",
+      "totalMonthlyContributions": "סך התרומות החודשיות",
+      "projectedIn5Years": "תחזוקה בעוד 5 שנים",
+      "projectedIn10Years": "תחזוקה בעוד 10 שנים",
+      "projectedInCustomYears": "תחזוקה בעוד {years} שנים"
+    },
+    "tableColumns": {
+      "name": "שם ההשקעה",
+      "ownership": "בעלות",
+      "type": "סוג",
+      "company": "חברה מנהלת",
+      "track": "קרן",
+      "currentBalance": "יתרה נוכחית",
+      "monthlyContribution": "תרומה חודשית",
+      "accumulationFee": "עמלת צבירה",
+      "depositFee": "עמלת הפקדה",
+      "last5YearReturn": "תשואה 5 שנים",
+      "in1Year": "בעוד שנה",
+      "in5Years": "בעוד 5 שנים",
+      "in10Years": "בעוד 10 שנים",
+      "in15Years": "בעוד 15 שנים",
+      "inCustomYears": "בעוד {years} שנים",
+      "typeHishtalmut": "קרן השתלמות",
+      "typeGemel": "קופת גמל",
+      "typeHashkaa": "גמל להשקעה",
+      "typeSavings": "פוליסת חיסכון"
+    },
+    "expandedView": {
+      "investmentDetails": "פרטי ההשקעה",
+      "editableInputs": "ערכים הניתנים לעריכה",
+      "publicTrackPerformance": "ביצועי הקרן הציבוריים",
+      "detailedSimulation": "סימולציה מפורטת",
+      "mockActions": "פעולות",
+      "name": "שם ההשקעה",
+      "owner": "בעלות",
+      "productType": "סוג המוצר",
+      "managingCompany": "חברה מנהלת",
+      "track": "שם הקרן",
+      "fundId": "מזהה קרן רשמי",
+      "lastUpdate": "עדכון אחרון",
+      "status": "סטטוס",
+      "active": "פעיל",
+      "inactive": "לא פעיל",
+      "performance": {
+        "lastMonth": "חודש האחרון",
+        "last1Year": "שנה אחרונה",
+        "last3Years": "3 שנים",
+        "last5Years": "5 שנים",
+        "last10Years": "10 שנים"
+      },
+      "simulation": {
+        "period": "תקופה",
+        "today": "היום",
+        "projectedValue": "ערך משוער",
+        "totalContributions": "סך תרומות",
+        "estimatedFees": "עמלות משוערות",
+        "estimatedNetGain": "רווח נקי משוער"
+      },
+      "mockActions": {
+        "updateBalance": "עדכון יתרה",
+        "addDeposit": "הפקדה חד פעמית",
+        "changeFees": "שינוי עמלות",
+        "changeTrack": "שינוי קרן"
+      }
+    },
+    "summaryTable": {
+      "title": "סיכום חיסכון מנוהל",
+      "period": "תקופה",
+      "today": "היום",
+      "in1Year": "בעוד שנה",
+      "in5Years": "בעוד 5 שנים",
+      "in10Years": "בעוד 10 שנים",
+      "in15Years": "בעוד 15 שנים",
+      "inCustomYears": "בעוד {years} שנים",
+      "hishtalmut": "קרן השתלמות",
+      "gemel": "קופת גמל",
+      "hashkaa": "גמל להשקעה",
+      "savings": "פוליסה",
+      "total": "סך הכל"
+    },
+    "disclaimers": {
+      "informational": "מידע זה להצגה בלבד ובוסיס על ערכים שהוזנו ידנית",
+      "noAdvice": "MyBalance אינו מספק ייעוץ פיננסי",
+      "publicData": "נתוני הביצוע הציבוריים אינם משקפים תשואה אישית",
+      "simulation": "הסימולציות מבוססות על הנחות מעריכה ועשויות שלא לתאם למציאות"
+    },
+    "ownerLabels": {
+      "self": "שלי",
+      "spouse": "בן זוג",
+      "child": "ילד",
+      "shared": "משותף",
+      "family": "משפחתי",
+      "other": "אחר"
+    },
+    "publicTrackPerformance": "ביצועי המסלול הציבוריים",
+    "publicDataNote": "אלה ביצועי מסלול ציבוריים, לא תשואה אישית.",
+    "lastMonth": "חודש האחרון",
+    "last1Year": "שנה אחרונה",
+    "last3Years": "3 שנים",
+    "last5Years": "5 שנים",
+    "last10Years": "10 שנים",
+    "lastUpdated": "עודכן לאחרונה",
+    "addFundButton": "הוסף קרן",
+    "modal": {
+      "editFund": "עריכת קרן",
+      "editSubtitle": "עדכן את פרטי הקרן המשמשים לחישובי התחזוקה",
+      "addFund": "הוסף קרן מנוהלת",
+      "addSubtitle": "הזן את פרטי הקרן כדי לדמות צבירה עתידית",
+      "cancel": "ביטול",
+      "save": "שמור",
+      "add": "הוסף",
+      "investmentIdentity": "זהות הקרן",
+      "fundDetails": "פרטי הקרן",
+      "assumptions": "ההנחות שלך",
+      "mockDataNote": "השינויים זמניים לחוויה זו בלבד והם יתאפסו לאחר רענון הדף.",
+      "investmentNamePlaceholder": "לדוגמה, חשבון החיסכון שלי",
+      "companyPlaceholder": "לדוגמה, בנק לאומי",
+      "trackPlaceholder": "לדוגמה, קרן שמרנית"
+    }
   }
 }

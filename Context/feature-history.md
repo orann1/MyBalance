@@ -155,4 +155,104 @@ Branch History:
 - Merged into: master
 - Commit: feat: implement phase 1b dashboard mock experience
 
-Next phase: Phase 2 — TBD (awaiting product roadmap)
+## Phase 2A — Managed Savings Mock Experience
+
+Status: Completed and Approved (2026-06-28)
+
+Routes:
+- Canonical Hebrew route: `/managed-savings`
+- English route: `/en/managed-savings`
+- Legacy compatibility: `/pension-gemel` (still functional, not primary nav)
+
+Feature Focus:
+Non-pension managed savings only. Pension investments intentionally separated into a future dedicated page to keep pension-specific concepts (retirement age, conversion factors, monthly pension estimates) isolated.
+
+Completed:
+- **Page Structure:**
+  - Top summary area with 5 KPI cards: total current value, monthly contributions, projected in 5Y, projected in 10Y, projected in custom horizon
+  - Interactive custom horizon selector (1–50 years) affecting all projection columns
+  - No pension monthly estimate card (pension-specific, intentionally excluded)
+
+- **Main Investments Table:**
+  - Premium styled table with expand/collapse rows
+  - Columns: name, ownership, type, company/track, current balance, monthly contribution, accumulation fee, 5Y historical return, 1Y/5Y/10Y/15Y/custom projections, edit button
+  - Zebra striping, column borders, active-row highlight on expand
+  - `React.Fragment` wrappers for semantic table structure
+
+- **Expanded Row:**
+  - Public track performance card only (last month, 1Y, 3Y, 5Y, 10Y returns)
+  - Public data disclaimer note
+  - Last updated metadata line
+  - Smooth entry animation via CSS keyframe (`expandedRowIn`)
+
+- **Add Managed Fund Modal:**
+  - Three card sections: Fund Identity, Fund Details, Your Assumptions
+  - Product type select dropdown with translated labels
+  - Client-side only — adds investment to local state, resets on refresh
+  - Smooth open animation via CSS keyframes (`modalBackdropIn`, `modalPanelIn`)
+
+- **Edit Managed Fund Modal:**
+  - Same structure as Add modal with pre-populated values
+  - Edit button in table row triggers modal for that investment
+  - Client-side only — updates local state, resets on refresh
+
+- **Internationalization:**
+  - All user-facing strings from translation files (he.json, en.json)
+  - Complete Hebrew (RTL) and English (LTR) translations
+  - `pensionGemel` namespace retained in both message files for legacy routes
+  - Timezone set to `Asia/Jerusalem` in next-intl request config
+
+- **Animation:**
+  - Real CSS `@keyframes` defined in `globals.css` (no animation plugin dependency)
+  - `modal-backdrop-in`: backdrop fade 200ms
+  - `modal-panel-in`: panel scale + translate in 240ms with spring easing
+  - `expanded-row-in`: row fade + slide-up 200ms
+
+- **Architecture:**
+  - Root-level `src/app/managed-savings/page.tsx` for canonical Hebrew route
+  - Locale-level `src/app/[locale]/managed-savings/page.tsx` for explicit locale routes
+  - Shared components under `src/components/managed-savings/`
+  - Mock data in `src/lib/mock/managed-savings-data.ts`
+  - Navigation in Sidebar and MobileDrawer updated to `/managed-savings`
+
+Out of Scope (Not Implemented):
+- Pension page (intentionally deferred — dedicated future phase)
+- Real database or Prisma schema
+- API integration with Data.gov.il or any external source
+- Authentication or user accounts
+- Persistent data storage (all edits reset on page refresh)
+- Production-grade financial calculation engine
+- Financial advisory or recommendation functionality
+- Fund comparison mode
+- Export/import functionality
+
+Automated Checks:
+- ESLint: clean (0 errors, 0 warnings)
+- TypeScript: no errors
+- Build: successful (25 routes including `/managed-savings` and legacy `/pension-gemel`)
+
+Browser QA:
+- `/` Hebrew dashboard renders correctly
+- `/managed-savings` Hebrew RTL, lang="he"
+- `/en/managed-savings` English LTR, lang="en"
+- `/en` English dashboard, no regressions
+- `/pension-gemel` legacy route functional
+- Navigation sidebar and mobile drawer point to `/managed-savings`
+- Add fund modal opens with visible animation, closes cleanly
+- Edit fund modal opens with visible animation, closes cleanly
+- Expanded row opens with visible animation
+- Product type dropdown shows translated labels (no raw keys)
+- Table borders, zebra striping, and column separators visible
+- Client-side add/edit behavior works without persistence
+- No DB/API/Auth/persistence behavior
+
+Known Limitations:
+- Projection calculations use simplified fixed-rate formulas (not production-grade)
+- `ENVIRONMENT_FALLBACK` warning logged at build time (non-fatal; timeZone configured in request.ts)
+- PensionGemelTable has invalid `<div>` wrapper inside `<tbody>` (legacy page, not active nav)
+- Mock data resets on page refresh (by design for mock experience)
+
+Branch History:
+- Feature branch: feature/pension-gemel-mock-experience
+- Merged into: master
+- Commit: feat: add managed savings mock experience

@@ -153,3 +153,32 @@
 @utility shadow-card {
   box-shadow: var(--shadow-card);
 }
+
+/* ─── Modal & panel entrance animations ─────────────────────────────────── */
+
+@keyframes modalBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modalPanelIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+@keyframes expandedRowIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@utility modal-backdrop-in {
+  animation: modalBackdropIn 200ms ease-out both;
+}
+
+@utility modal-panel-in {
+  animation: modalPanelIn 240ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@utility expanded-row-in {
+  animation: expandedRowIn 200ms ease-out both;
+}
