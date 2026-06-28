@@ -6,5 +6,82 @@
   "foundation": {
     "title": "MyBalance — App Foundation",
     "description": "This is a clean app foundation. The final user interface will be added in the next phase."
+  },
+  "nav": {
+    "navigation": "Navigation",
+    "dashboard": "Dashboard",
+    "accounts": "Accounts",
+    "assets": "Assets",
+    "liabilities": "Liabilities",
+    "snapshots": "Snapshots",
+    "pensionGemel": "Pension & Gemel",
+    "goals": "Goals",
+    "importExport": "Import/Export",
+    "settings": "Settings",
+    "tools": "Tools"
+  },
+  "sidebar": {
+    "subtitle": "Personal wealth snapshot",
+    "sampleData": "Data for demonstration purposes only."
+  },
+  "dashboard": {
+    "greeting": "Hello, Oran",
+    "subtitle": "Your financial snapshot, today",
+    "mockDataBadge": "Sample Data",
+    "updatedToday": "Updated today",
+    "netWorth": "Net Worth",
+    "totalAssets": "Total Assets",
+    "totalLiabilities": "Total Liabilities",
+    "monthlyChange": "Monthly Change",
+    "netWorthTimeline": "Net Worth Development",
+    "assetAllocation": "Asset Allocation",
+    "myAssets": "My Assets",
+    "myLiabilities": "Liabilities",
+    "pensionAndGemel": "Pension and Gemel",
+    "financialGoals": "Financial Goals",
+    "dataFreshness": "Data Freshness",
+    "insightsToReview": "Insights to Review",
+    "total": "Total",
+    "ofTotal": "of total",
+    "coming_soon": "Coming Soon"
+  },
+  "assets": {
+    "cash": "Cash",
+    "investments": "Investments",
+    "pension": "Pension",
+    "hishtalmut": "Keren Hishtalmut",
+    "gemel": "Gemel Fund",
+    "realEstate": "Real Estate",
+    "other": "Other"
+  },
+  "liabilities": {
+    "mortgage": "Mortgage",
+    "bankLoan": "Bank Loan",
+    "creditCards": "Credit Cards"
+  },
+  "goals": {
+    "emergencyFund": "Emergency Fund",
+    "netWorthTarget": "Net Worth Target",
+    "debtReduction": "Debt Reduction"
+  },
+  "freshness": {
+    "manualAssets": "Manual Assets",
+    "liabilities": "Liabilities",
+    "pensionPublicData": "Pension Public Data",
+    "lastSnapshot": "Last Snapshot",
+    "twoDaysAgo": "Updated 2 days ago",
+    "oneWeekAgo": "Updated a week ago",
+    "lastMonth": "Updated last month",
+    "specificDate": "June 25, 2026",
+    "updatedDaysAgo": "Updated {days} days ago",
+    "updatedWeeksAgo": "Updated a week ago",
+    "updatedMonthsAgo": "Updated last month",
+    "lastUpdated": "Updated {date}"
+  },
+  "insights": {
+    "realEstateExposure": "Real estate allocation is relatively high",
+    "liquidityStable": "Current liquidity level appears stable per sample data",
+    "liabilityTracking": "Worth monitoring liability data freshness",
+    "disclaimer": "Public pension returns do not replace personal balance"
   }
 }

@@ -3,18 +3,15 @@ import { notFound } from "next/navigation";
 import { setRequestLocale } from "next-intl/server";
 import { routing } from "@/i18n/routing";
 import { getDirection } from "@/lib/locale/direction";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Heebo } from "next/font/google";
+import { RootLayoutProvider } from "@/components/providers/RootLayoutProvider";
 import "../globals.css";
 import type { Locale } from "@/i18n/config";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const heebo = Heebo({
+  variable: "--font-heebo",
+  subsets: ["latin", "hebrew"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
 });
 
 export const metadata: Metadata = {
@@ -47,9 +44,11 @@ export default async function LocaleLayout({
     <html
       lang={locale}
       dir={direction}
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${heebo.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <RootLayoutProvider locale={locale}>{children}</RootLayoutProvider>
+      </body>
     </html>
   );
 }

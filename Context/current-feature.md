@@ -7,12 +7,12 @@ Phase 1 — Foundation and Static Hebrew RTL Dashboard
 ### Phase Breakdown
 
 - **Phase 1A: Clean App Foundation** — COMPLETED, ready for Product QA
-- **Phase 1B: Static Dashboard UI** — NOT STARTED, pending external mockup approval
+- **Phase 1B: Static Dashboard UI** — COMPLETED, ready for Product QA
 
 ## Status
 
 Phase 1A: Complete (foundation implemented and tested)
-Phase 1B: Not Started (dashboard design pending)
+Phase 1B: **COMPLETED & APPROVED** (dashboard UI and app shell implemented and product-reviewed)
 
 ## Context
 
@@ -27,7 +27,7 @@ Establishes the core infrastructure:
 - Formatting helpers (currency, date, percent, number, month)
 - Minimal placeholder page confirming foundation works
 
-### Phase 1B (Pending)
+### Phase 1B (Completed)
 Static dashboard UI with mock data showing:
 - Total net worth
 - Total assets
@@ -37,8 +37,8 @@ Static dashboard UI with mock data showing:
 - Major asset categories
 - Major liability categories
 - Recent snapshots / freshness indicators
-
-**Note:** Dashboard UI will use mock data only and is not started until external mockup is approved.
+- App shell with desktop sidebar and mobile drawer
+- Responsive layout for desktop, tablet, and mobile
 
 ## Phase 1A: Built (Complete)
 
@@ -77,16 +77,24 @@ Static dashboard UI with mock data showing:
 - No dashboard cards, charts, or financial data
 - Clean informational wording (no financial advice)
 
-## Phase 1B: To Build (Not Started, Pending)
+## Phase 1B: Built and Ready for QA
 
-Will add (pending external mockup approval):
-- Dashboard summary cards
-- Net worth display
-- Asset/liability overview
-- Charts and visualizations
-- Sidebar/navigation
-- Top bar/header
-- Mock financial data display
+Implemented:
+- App shell with desktop sidebar and mobile drawer
+- Dashboard summary cards (KPI cards with gradient styling)
+- Net worth timeline chart (Recharts)
+- Asset allocation donut chart (Recharts)
+- Assets summary section
+- Liabilities summary section
+- Pension/Gemel section with compliance disclaimer
+- Financial goals progress bars
+- Data freshness status indicators
+- Informational insights section
+- Mock financial data (static, clearly marked as example data)
+- Responsive layout (desktop, tablet, mobile)
+- Complete Hebrew translation for UI
+- English translation keys for future support
+- 8 placeholder pages for future feature areas
 
 ### Do Not Build in Phase 1B
 
@@ -117,14 +125,19 @@ Will add (pending external mockup approval):
 - ✓ No runtime errors on routes
 - ✓ ESLint, TypeScript, build all pass
 
-## Phase 1B Acceptance Criteria (NOT STARTED)
+## Phase 1B Acceptance Criteria (READY FOR QA)
 
-To be updated when Phase 1B begins:
-- Dashboard displays with Hebrew UI and RTL
-- Summary cards show total net worth, assets, liabilities
-- Charts render correctly
-- Mock financial data displays appropriately
-- No real data persistence or authentication
+Met criteria:
+- ✓ Dashboard displays with Hebrew UI and RTL
+- ✓ Summary KPI cards show net worth, assets, liabilities, monthly change
+- ✓ Charts render correctly (Recharts integrated)
+- ✓ Mock financial data displays appropriately with example badge
+- ✓ No real data persistence or authentication
+- ✓ App shell with sidebar and mobile drawer
+- ✓ Responsive layout on desktop, tablet, mobile
+- ✓ All UI text from translation files
+- ✓ No financial advice language
+- ✓ Placeholder pages for all feature areas
 
 ## QA Requirements — Phase 1A (COMPLETED)
 
@@ -147,8 +160,22 @@ Updated for Phase 1A:
 - ✓ `Context/current-feature.md` — Updated to reflect unprefixed Hebrew at root and new routing structure
 - ✓ `Context/i18n-and-localization.md` — Updated to document unprefixed Hebrew at root and localePrefix: "as-needed"
 
+Updated for Phase 1B:
+- ✓ `Context/current-feature.md` — Updated to reflect Phase 1B completion and visual design updates
+- ✓ `Context/Features/dashboard-feature-spec.md` — Documented visual design system, typography, colors, gradients, layout, card system, navigation, charts
+
+Phase 1B Visual Design Enhancements:
+- Implemented Lovable fintech design system with oklch color space
+- Added Heebo font for Hebrew-first typography
+- Semantic financial category gradients (networth, asset, liability, goal, pension, cash)
+- Soft pastel app background gradient
+- Rounded-3xl card styling with shadow-card soft shadows
+- Real lucide-react icons replacing placeholders
+- Active navigation state with gradient backgrounds and accent bars
+- Improved KPI card styling with icon bubbles and trend indicators
+- Responsive layout optimization for desktop (1440px), tablet (768-1024px), mobile (390-430px)
+
 Checked but not updated:
 - `Context/coding-standards.md` — Standards being followed
-- `Context/security-and-privacy.md` — No security/privacy issues in Phase 1A
-
-No changes needed to `Context/Features/dashboard-feature-spec.md` — Dashboard not started yet.
+- `Context/security-and-privacy.md` — No security/privacy issues identified
+- `Context/i18n-and-localization.md` — Locale architecture unchanged

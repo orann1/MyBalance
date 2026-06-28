@@ -6,5 +6,82 @@
   "foundation": {
     "title": "MyBalance — יסוד האפליקציה",
     "description": "זהו יסוד נקי של האפליקציה. ממשק המשתמש הסופי יתווספו בשלב הבא."
+  },
+  "nav": {
+    "navigation": "ניווט",
+    "dashboard": "דשבורד",
+    "accounts": "חשבונות",
+    "assets": "נכסים",
+    "liabilities": "התחייבויות",
+    "snapshots": "תמונת הון",
+    "pensionGemel": "פנסיה וגמל",
+    "goals": "יעדים",
+    "importExport": "ייבוא וייצוא",
+    "settings": "הגדרות",
+    "tools": "כלי ניהול"
+  },
+  "sidebar": {
+    "subtitle": "תמונת הון אישית",
+    "sampleData": "הנתונים להמחשה בלבד."
+  },
+  "dashboard": {
+    "greeting": "שלום, אורן",
+    "subtitle": "תמונת המצב הפיננסית שלך, היום",
+    "mockDataBadge": "נתוני דוגמה",
+    "updatedToday": "עודכן היום",
+    "netWorth": "הון נטו",
+    "totalAssets": "סך נכסים",
+    "totalLiabilities": "סך התחייבויות",
+    "monthlyChange": "שינוי חודשי",
+    "netWorthTimeline": "התפתחות ההון נטו",
+    "assetAllocation": "הקצאת נכסים",
+    "myAssets": "הנכסים שלי",
+    "myLiabilities": "התחייבויות",
+    "pensionAndGemel": "פנסיה וגמל",
+    "financialGoals": "יעדים פיננסיים",
+    "dataFreshness": "עדכניות הנתונים",
+    "insightsToReview": "תובנות לבדיקה",
+    "total": "סך הכל",
+    "ofTotal": "מסך הנכסים",
+    "coming_soon": "בקרוב"
+  },
+  "assets": {
+    "cash": "מזומן",
+    "investments": "השקעות",
+    "pension": "פנסיה",
+    "hishtalmut": "קרן השתלמות",
+    "gemel": "קופת גמל",
+    "realEstate": "נדל״ן",
+    "other": "אחר"
+  },
+  "liabilities": {
+    "mortgage": "משכנתא",
+    "bankLoan": "הלוואה בנקאית",
+    "creditCards": "כרטיסי אשראי"
+  },
+  "goals": {
+    "emergencyFund": "כרית ביטחון",
+    "netWorthTarget": "יעד הון נטו",
+    "debtReduction": "הקטנת חוב"
+  },
+  "freshness": {
+    "manualAssets": "נכסים ידניים",
+    "liabilities": "התחייבויות",
+    "pensionPublicData": "נתוני פנסיה ציבוריים",
+    "lastSnapshot": "תמונת הון אחרונה",
+    "twoDaysAgo": "עודכן לפני 2 ימים",
+    "oneWeekAgo": "עודכן לפני שבוע",
+    "lastMonth": "עודכן לחודש האחרון",
+    "specificDate": "25 ביוני 2026",
+    "updatedDaysAgo": "עודכן לפני {days} ימים",
+    "updatedWeeksAgo": "עודכן לפני שבוע",
+    "updatedMonthsAgo": "עודכן לחודש האחרון",
+    "lastUpdated": "עודכן ב-{date}"
+  },
+  "insights": {
+    "realEstateExposure": "שיעור נדל״ן מתוך סך הנכסים גבוה יחסית",
+    "liquidityStable": "רמת הנזילות הנוכחית נראית יציבה לפי נתוני הדוגמה",
+    "liabilityTracking": "כדאי לעקוב אחרי עדכניות נתוני ההתחייבויות",
+    "disclaimer": "נתוני תשואות ציבוריים אינם מחליפים יתרה אישית"
   }
 }
