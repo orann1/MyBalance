@@ -345,7 +345,51 @@ Checked but not updated:
 
 ### Status
 
-Planned / Not Started
+Phase 2B-1 (Infrastructure / Schema / Seed) — **COMPLETED AND VERIFIED** (2026-06-29)
+Phase 2B-2 (Server Actions / UI DB Connection) — Not started
+
+### Phase 2B-1: Completed (2026-06-29)
+
+Infrastructure, schema, and seed only. No UI DB connection, no server actions, no Auth.js.
+
+#### Core infrastructure
+- Prisma installed (v7) with PostgreSQL provider (`prisma` dev, `@prisma/client` runtime).
+- `@prisma/adapter-pg` and `pg` installed for Prisma v7 adapter pattern.
+- `zod`, `react-hook-form`, `@hookform/resolvers`, `tsx` installed.
+- `prisma/schema.prisma` — User and ManagedSavingsHolding models with all planned fields.
+- `prisma.config.ts` — Prisma v7 config with schema path and datasource URL.
+- `src/lib/db/prisma.ts` — singleton Prisma client using adapter pattern, hot-reload safe.
+- `src/lib/financial/units.ts` — `toMinorUnits`, `fromMinorUnits`, `percentToBps`, `bpsToPercent`.
+- `prisma/seed.ts` — seeds 1 dev user + 8 managed savings holdings from Phase 2A mock data.
+
+#### Local PostgreSQL workflow
+- `docker-compose.yml` — local PostgreSQL 16 container (`mybalance_local`, host port 5433 → container port 5432), persistent volume. Host port 5433 is used because native PostgreSQL 18 is installed on this machine and occupies port 5432.
+- `.env.example` — updated with local DB URL (matches Docker Compose) and Neon placeholder.
+- Local DB is isolated from Neon — data is not shared between environments.
+- Neon migrations use `migrate deploy` only (not `migrate dev`).
+- `package.json` — `db:local:up/down/logs`, `db:migrate:local`, `db:seed:local`, `db:studio:local`, `db:migrate:deploy`, `db:generate`, `db:validate` scripts added.
+
+#### Status (verified 2026-06-29)
+- Docker Desktop v29.5.3 running. WSL2 was installed between sessions — Docker daemon now operational.
+- Local PostgreSQL container starts successfully on host port **5433** (not 5432). Native PostgreSQL 18 is installed on this machine and occupies port 5432 — host port 5433 was chosen to avoid the conflict.
+- Migration applied: `prisma/migrations/20260629090812_init_managed_savings/` created and applied.
+- Seed verified: 1 dev user (`dev@mybalance.local`) + 8 holdings (hishtalmut×2, gemel×3, hashkaa×1, savings×2).
+- Prisma format, validate, generate all passed.
+- lint, tsc --noEmit, build all passed. Pre-existing ENVIRONMENT_FALLBACK build warning is unrelated to this task.
+- `prisma.config.ts` updated with two fixes: `dotenv/config` import (Prisma v7 CLI does not auto-load `.env`), and `migrations.seed` config (Prisma v7 reads seed from config file, not `package.json`).
+- `.gitignore` updated: added `!.env.example` negation so the example template file can be committed.
+
+#### Port note
+Host port **5433** is used instead of the default 5432. Native PostgreSQL 18 (`postgresql-x64-18` service) runs on this machine and occupies port 5432. The Docker Compose config maps `5433:5432` — the container still runs PostgreSQL on its internal port 5432.
+
+#### Quick start
+```bash
+cp .env.example .env           # already has correct local DB URL (port 5433)
+npm run db:local:up             # start PostgreSQL container (port 5433)
+npm run db:migrate:local        # apply migration (creates tables)
+npm run db:seed:local           # seed 1 dev user + 8 holdings
+npm run db:studio:local         # open Prisma Studio to inspect data
+```
 
 ### Goal
 

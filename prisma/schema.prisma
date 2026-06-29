@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma v7: connection URL is configured in prisma.config.ts, not here.
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum ManagedSavingsType {
+  hishtalmut // Keren Hishtalmut
+  gemel // Kupat Gemel
+  hashkaa // Gemel LeHashkaa
+  savings // Savings policy / managed savings
+}
+
+enum OwnerLabel {
+  self
+  spouse
+  child
+  shared
+  family
+  other
+}
+
+enum HoldingStatus {
+  active
+  inactive
+  archived
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+// Phase 2B: single-user dev stub. Auth.js integration is planned for a future phase.
+// Do not add password/session/account fields here until Auth.js is implemented.
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  managedSavingsHoldings ManagedSavingsHolding[]
+}
+
+// Stores the user's personal managed savings holdings.
+// Money fields use BigInt minor units (agorot). Fee fields use Int basis points.
+// Does NOT store pension funds — those are a future dedicated model.
+model ManagedSavingsHolding {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  name   String
+  type   ManagedSavingsType
+  owner  OwnerLabel         @default(self)
+  status HoldingStatus      @default(active)
+
+  // Money stored as agorot (integer minor units). Never use floats for persisted balances.
+  currentBalanceMinor      BigInt @default(0)
+  monthlyContributionMinor BigInt @default(0)
+  currency                 String @default("ILS")
+
+  // Fees stored as basis points (bps). 100 bps = 1%.
+  accumulationFeeBps Int @default(0)
+  depositFeeBps      Int @default(0)
+
+  managingCompany String?
+  trackName       String?
+
+  // Optional: future Data.gov.il / GemelNet / PensionNet fund matching
+  officialFundId String?
+
+  valuationDate DateTime?
+
+  // Personal notes — sensitive, displayed in expanded row only, not in main table
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([type])
+  @@index([officialFundId])
+}

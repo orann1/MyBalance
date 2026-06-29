@@ -1,0 +1,35 @@
+# Local PostgreSQL for MyBalance development.
+# This is ONLY for local development and testing.
+# Do NOT use this for the Neon remote database — that is managed separately.
+#
+# Usage:
+#   Start:  docker compose up -d
+#   Stop:   docker compose down
+#   Logs:   docker compose logs -f db
+#   Reset:  docker compose down -v   (destroys local data volume)
+#
+# After starting, copy .env.example to .env and set the local DATABASE_URL,
+# then run: npm run db:migrate:local
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: mybalance_local_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mybalance
+      POSTGRES_PASSWORD: mybalance_local_password
+      POSTGRES_DB: mybalance_local
+    ports:
+      - "5433:5432"
+    volumes:
+      - mybalance_local_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mybalance -d mybalance_local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mybalance_local_data:
+    driver: local

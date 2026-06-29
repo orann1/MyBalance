@@ -256,3 +256,65 @@ Branch History:
 - Feature branch: feature/pension-gemel-mock-experience
 - Merged into: master
 - Commit: feat: add managed savings mock experience
+
+## Phase 2B-1 — Managed Savings Persistence Infrastructure
+
+Status: Completed (2026-06-29)
+
+Note: This entry covers Phase 2B-1 (infrastructure / schema / seed) only. Phase 2B overall is not yet complete. Phase 2B-2 (server actions and UI DB connection) is the next planned sub-phase.
+
+Completed:
+- **Prisma v7 setup:**
+  - `prisma` (dev dependency) and `@prisma/client` (runtime) installed.
+  - `@prisma/adapter-pg` and `pg` installed for Prisma v7 adapter pattern.
+  - `prisma.config.ts` — Prisma v7 config with schema path, datasource URL, and seed command. Requires `dotenv/config` import because Prisma v7 CLI does not auto-load `.env` when evaluating the config file.
+  - `prisma/schema.prisma` — Prisma v7 schema. Datasource block has no `url` field (connection URL is in `prisma.config.ts`).
+
+- **Schema models:**
+  - `User` — stub model for future Auth.js compatibility. Fields: id (cuid), email (unique), name (optional), createdAt, updatedAt.
+  - `ManagedSavingsHolding` — personal managed savings record. Non-pension only (pension is a future dedicated model).
+    - Money fields (`currentBalanceMinor`, `monthlyContributionMinor`) stored as `BigInt` integer agorot (ILS × 100). Never floats.
+    - Fee fields (`accumulationFeeBps`, `depositFeeBps`) stored as `Int` basis points (bps = percent × 100).
+    - `notes` field: optional, personal, displayed in expanded row only — not in main table.
+    - `officialFundId` field: optional, reserved for future Data.gov.il / GemelNet fund matching.
+  - Enums: `ManagedSavingsType` (hishtalmut, gemel, hashkaa, savings), `OwnerLabel` (self, spouse, child, shared, family, other), `HoldingStatus` (active, inactive, archived).
+
+- **Supporting files:**
+  - `src/lib/db/prisma.ts` — singleton Prisma client with adapter pattern, hot-reload safe (global caching in development).
+  - `src/lib/financial/units.ts` — `toMinorUnits`, `fromMinorUnits`, `percentToBps`, `bpsToPercent` helpers.
+  - `prisma/seed.ts` — seeds 1 dev user (`dev@mybalance.local`) + 8 managed savings holdings using stable IDs (`hist-001`, `gemel-001`, etc.) so upsert is idempotent.
+  - `zod`, `react-hook-form`, `@hookform/resolvers`, `tsx` installed.
+
+- **Local PostgreSQL workflow:**
+  - `docker-compose.yml` — local PostgreSQL 16 Alpine container (`mybalance_local`).
+  - Host port **5433** mapped to container port 5432. Port 5433 was chosen because native PostgreSQL 18 (`postgresql-x64-18` Windows service) occupies port 5432 on the development machine.
+  - `.env.example` — local DATABASE_URL (port 5433) + Neon placeholder. Previously gitignored by overly broad `.env*` pattern — fixed by adding `!.env.example` negation to `.gitignore`.
+  - `package.json` scripts added: `db:local:up/down/logs`, `db:migrate:local`, `db:seed:local`, `db:studio:local`, `db:migrate:deploy`, `db:generate`, `db:validate`.
+
+- **Local DB verified:**
+  - Migration applied: `prisma/migrations/20260629090812_init_managed_savings/migration.sql`.
+  - Seed verified: 1 dev user (`dev@mybalance.local`) + 8 holdings (hishtalmut×2, gemel×3, hashkaa×1, savings×2).
+
+- **Automated checks passed:**
+  - ESLint: clean (0 errors, 0 warnings)
+  - TypeScript: no errors
+  - Build: successful (25 routes, no regressions)
+  - Prisma format, validate, generate: all passed
+
+Out of Scope (Not Implemented in Phase 2B-1):
+- Server actions for CRUD on holdings
+- UI connection to database (Managed Savings page still uses mock data)
+- Auth.js or any authentication
+- PublicFund or FundReturn models (Phase 2C)
+- Data.gov.il / GemelNet / PensionNet sync
+- Net worth snapshot integration
+- Neon remote DB migration (local only)
+
+Known Issues:
+- Native PostgreSQL 18 is installed on the development machine and occupies port 5432. Local development always uses port 5433. This is documented in `docker-compose.yml`, `.env.example`, and context docs.
+- Pre-existing `ENVIRONMENT_FALLBACK` build warning (non-fatal, unrelated to Phase 2B-1).
+
+Branch History:
+- Feature branch: feature/managed-savings-persistence
+- Merged into: master
+- Commit: feat: add managed savings persistence infrastructure

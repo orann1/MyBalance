@@ -6,24 +6,45 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:local:up": "docker compose up -d",
+    "db:local:down": "docker compose down",
+    "db:local:logs": "docker compose logs -f db",
+    "db:generate": "prisma generate",
+    "db:validate": "prisma validate",
+    "db:migrate:local": "prisma migrate dev",
+    "db:seed:local": "prisma db seed",
+    "db:studio:local": "prisma studio",
+    "db:migrate:deploy": "prisma migrate deploy"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
     "lucide-react": "^1.21.0",
     "next": "16.2.9",
     "next-intl": "^4.13.0",
+    "pg": "^8.22.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "recharts": "^2.10.0"
+    "react-hook-form": "^7.80.0",
+    "recharts": "^2.10.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }
