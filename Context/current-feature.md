@@ -9,7 +9,7 @@ Phase 2A — Managed Savings Mock Experience
 - **Phase 1A: Clean App Foundation** — COMPLETED & APPROVED
 - **Phase 1B: Static Dashboard UI** — COMPLETED & APPROVED
 - **Phase 2A: Managed Savings Mock Experience** — COMPLETED & APPROVED
-- **Phase 2B: TBD** — Not started
+- **Phase 2B: Managed Savings Persistence Foundation** — Planned / Not started
 
 ## Status
 
@@ -191,24 +191,10 @@ A dedicated Pension page is planned as a future feature to handle pension-specif
 - Expandable rows showing detailed information
 
 **Expandable Row Details:**
-1. **Investment Identity Card** - Shows: name, owner, product type, company, track, fund ID, status, last update date
-2. **Editable Assumptions Card** - Client-side editable fields:
-   - Current balance
-   - Monthly contribution
-   - Accumulation fee percentage
-   - Deposit fee percentage
-   - (Pension-specific fields removed: retirement age, conversion factor)
-3. **Public Track Performance Card** - Clearly labeled with: last month, last 1Y, 3Y, 5Y, 10Y returns
-4. **Detailed Simulation Card** - Projections for today, 1Y, 5Y, 10Y, 15Y, custom horizon with:
-   - Projected value, estimated contributions, estimated fees, estimated net gain
-   - (NO estimated monthly pension - pension feature removed)
-5. **Mock Actions Row** - Visual-only actions: update balance, add deposit, change fees, change track
-
-**Bottom Summary Table:**
-1. **Managed Savings Summary** - Single table by product type and years
-   - Rows: Today, In 1 Year, In 5 Years, In 10 Years, In 15 Years, In Custom X Years
-   - Columns: Keren Hishtalmut, Kupat Gemel, Gemel LeHashkaa, Savings Policy, Total
-   - (NO pension columns, NO monthly pension column)
+- Public track performance card (last month, 1Y, 3Y, 5Y, 10Y returns)
+- Public data disclaimer note
+- Last updated metadata line
+- Smooth entry animation via CSS keyframe (`expandedRowIn`)
 
 **Disclaimers & Safety Language:**
 - Four prominent disclaimers about data being informational only
@@ -226,8 +212,8 @@ A dedicated Pension page is planned as a future feature to handle pension-specif
 - All 100+ UI strings sourced from translation files (no hardcoded text)
 - Complete Hebrew translations
 - Complete English translations
-- Proper Hebrew RTL layout (dir="rtl") at `/pension-gemel` and `/he/pension-gemel`
-- Proper English LTR layout (dir="ltr") at `/en/pension-gemel`
+- Proper Hebrew RTL layout (dir="rtl") at `/managed-savings`
+- Proper English LTR layout (dir="ltr") at `/en/managed-savings`
 
 ### Mock Data
 
@@ -273,17 +259,16 @@ This phase explicitly does NOT include:
 
 ### Acceptance Criteria
 
-- ✓ `/pension-gemel` renders Hebrew RTL version
-- ✓ `/en/pension-gemel` renders English LTR version
-- ✓ Page includes top summary cards with 5 KPIs
-- ✓ Pension section with expandable rows
-- ✓ Managed savings section with expandable rows
-- ✓ Expanded rows show investment details and editable fields
-- ✓ Editable fields update local state without persistence
-- ✓ Public track performance metrics displayed
-- ✓ Detailed simulation tables for multiple horizons
-- ✓ Bottom summary tables for all investments
-- ✓ Pension monthly pension estimates displayed
+- ✓ `/managed-savings` renders Hebrew RTL version (canonical route)
+- ✓ `/en/managed-savings` renders English LTR version
+- ✓ `/pension-gemel` still functional as legacy compatibility route (not primary nav)
+- ✓ Page includes top summary cards with 5 KPIs (no pension monthly estimate card)
+- ✓ Single managed savings table with expandable rows (non-pension products only)
+- ✓ Expanded rows show public track performance, disclaimer, and last updated metadata
+- ✓ Add managed fund modal opens with animation, adds to local state
+- ✓ Edit managed fund modal opens with animation, updates local state
+- ✓ Client-side mock add/edit behavior — resets on refresh by design
+- ✓ Public track performance metrics displayed in expanded row
 - ✓ All UI text from i18n translation files
 - ✓ Hebrew RTL layout proper
 - ✓ English LTR layout proper
@@ -291,6 +276,7 @@ This phase explicitly does NOT include:
 - ✓ No hardcoded visible UI text
 - ✓ Mock data only, no backend calls
 - ✓ Safe informational language, no financial advice
+- ✓ No pension content on managed savings page
 
 ### QA Requirements — Phase 2A (COMPLETED)
 
@@ -352,3 +338,71 @@ Checked but not updated:
 - `Context/i18n-and-localization.md` — Locale architecture unchanged
 - `Context/Features/pension-gemel-sync-feature-spec.md` — Sync feature is future phase; Managed Savings mock experience is independent
 - `Context/Features/dashboard-feature-spec.md` — Dashboard design system already documented for Phase 1B; Managed Savings reuses same system
+
+---
+
+## Phase 2B: Managed Savings Persistence Foundation
+
+### Status
+
+Planned / Not Started
+
+### Goal
+
+Convert the approved Managed Savings mock page into a DB-backed single-user/dev persistence experience. User-entered holdings will be stored in and loaded from a PostgreSQL database via Prisma server actions.
+
+### Scope
+
+- Bootstrap Prisma with PostgreSQL.
+- Add a User stub model for future Auth.js compatibility.
+- Add a ManagedSavingsHolding model for personal managed savings holdings.
+- Store user-entered holdings in DB via server actions.
+- Load holdings from DB on the Managed Savings page.
+- Create/update/archive holdings through server actions.
+- Use Zod validation for all writes.
+- Add a `notes` field to each holding — optional, personal, displayed in expanded row only (not in main table).
+- Allow notes to be edited through the edit modal or an appropriate expanded-row edit interaction.
+- Keep `officialFundId` as optional preparation for future Data.gov.il / GemelNet matching.
+- Keep public track performance as mock/fallback data until Phase 2C.
+- Preserve the current UI direction as much as possible.
+- Keep add/edit modals.
+- Keep expanded row minimal.
+
+### Non-Scope
+
+- No Data.gov.il API calls.
+- No GemelNet/PensionNet sync.
+- No PublicFund or FundReturn model implementation.
+- No dedicated Pension page.
+- No Auth.js production login.
+- No multi-user production isolation.
+- No net worth snapshot integration.
+- No import/export.
+- No fund comparison mode.
+- No production-grade financial calculation engine.
+- No financial advice or recommendation language.
+
+### Acceptance Criteria
+
+- [ ] Prisma is bootstrapped with a PostgreSQL connection.
+- [ ] User stub model exists (id, email, name, createdAt, updatedAt).
+- [ ] ManagedSavingsHolding model exists with all planned fields including `notes`.
+- [ ] Holdings are loaded from DB on the Managed Savings page.
+- [ ] Add modal creates a DB record via server action.
+- [ ] Edit modal updates a DB record via server action.
+- [ ] Archive/delete removes or archives a holding via server action.
+- [ ] All writes validated with Zod.
+- [ ] Notes field displayed in expanded row only.
+- [ ] Notes editable through edit modal.
+- [ ] Public track performance remains mock/fallback.
+- [ ] No financial advice language.
+- [ ] Hebrew RTL and English LTR layouts preserved.
+- [ ] No regressions on dashboard or other pages.
+
+### QA Requirements
+
+- `npm run lint` — must pass
+- `npm run build` — must pass
+- `npx tsc --noEmit` — must pass
+- Browser QA: load page, add holding, edit holding, verify persistence after refresh
+- Confirm no data leakage in URLs or logs
