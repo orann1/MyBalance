@@ -2,20 +2,31 @@
 
 ## Feature Name
 
-Phase 2A — Managed Savings Mock Experience
+Phase 2B-2 — Managed Savings DB-backed Actions and UI
 
 ### Phase Breakdown
 
 - **Phase 1A: Clean App Foundation** — COMPLETED & APPROVED
 - **Phase 1B: Static Dashboard UI** — COMPLETED & APPROVED
 - **Phase 2A: Managed Savings Mock Experience** — COMPLETED & APPROVED
-- **Phase 2B: Managed Savings Persistence Foundation** — Planned / Not started
+- **Phase 2B-1: Managed Savings Persistence Infrastructure** — COMPLETED (2026-06-29)
+- **Phase 2B-2: Managed Savings DB-backed Actions and UI** — COMPLETED (2026-06-29)
+- **Phase 2B-3 and beyond** — Not started
 
 ## Status
 
 Phase 1A: Complete and Approved
 Phase 1B: Complete and Approved
 Phase 2A: **COMPLETED AND APPROVED** (2026-06-28)
+Phase 2B-1: **COMPLETED** (2026-06-29)
+Phase 2B-2: **COMPLETED AND VERIFIED** (2026-06-29)
+Phase 2B-3: Not started
+
+## Known Limitations / Deferred Items
+
+- **`<html lang/dir>` SSR for English routes:** For `/en/*` routes, the initial server-rendered HTML has `lang="he" dir="rtl"` on the `<html>` element (from the minimal root layout). `SetHtmlAttributes` corrects this after client hydration. No visible layout flash — `AppShell` renders with `dir="ltr"` in SSR HTML. Should be addressed in a dedicated i18n hardening task before production.
+- **Dev-user stub:** All DB operations use `dev@mybalance.local`. Auth.js and production multi-user isolation are future scope.
+- **Public track performance:** Remains mock/fallback data until Phase 2C.
 
 ## Context
 
@@ -346,7 +357,7 @@ Checked but not updated:
 ### Status
 
 Phase 2B-1 (Infrastructure / Schema / Seed) — **COMPLETED AND VERIFIED** (2026-06-29)
-Phase 2B-2 (Server Actions / UI DB Connection) — Not started
+Phase 2B-2 (Server Actions / UI DB Connection) — **IN PROGRESS** (2026-06-29)
 
 ### Phase 2B-1: Completed (2026-06-29)
 
@@ -412,6 +423,40 @@ Convert the approved Managed Savings mock page into a DB-backed single-user/dev 
 - Keep add/edit modals.
 - Keep expanded row minimal.
 
+### Phase 2B-2: In Progress (2026-06-29)
+
+Server actions, Zod validation, cached DB reads, and DB-backed Managed Savings page.
+
+#### Files created
+- `src/lib/managed-savings/dev-user.ts` — Dev user helper (resolves `dev@mybalance.local`). TODO comment to replace with `session.user.id` when Auth.js is introduced.
+- `src/lib/managed-savings/serializers.ts` — Maps Prisma `ManagedSavingsHolding` records to `ManagedSavingsInvestment` UI type. Converts BigInt minor units to ILS numbers, bps to percent. Track performance is mock fallback until Phase 2C.
+- `src/lib/validation/managed-savings.ts` — Zod schemas: `CreateManagedSavingsSchema`, `UpdateManagedSavingsSchema`, `ArchiveManagedSavingsSchema`. Form validates UI values (ILS amounts, % fees). Server actions convert to minor units/bps.
+- `src/lib/data/managed-savings.ts` — Cached data access layer using `unstable_cache`. Cache key: `managed-savings-dev-user`. Cache tag: `managed-savings:dev-user`. Sorted by `createdAt asc`. Excludes archived holdings. Invalidated via `revalidateTag` after any write.
+- `src/lib/actions/managed-savings-actions.ts` — Server actions: `createManagedSavingsHolding`, `updateManagedSavingsHolding`, `archiveManagedSavingsHolding`. All validate with Zod, check ownership, convert units, call `revalidateTag` on success.
+- `src/components/managed-savings/ManagedSavingsPageClient.tsx` — Client wrapper receiving `initialInvestments` from server. Calls `router.refresh()` after successful mutations to reload fresh server data.
+
+#### Files updated
+- `src/lib/mock/managed-savings-data.ts` — Added `notes?: string` to `ManagedSavingsInvestment` interface.
+- `src/app/managed-savings/page.tsx` — Refactored from `"use client"` to async server component. Fetches holdings via `getManagedSavingsHoldingsForCurrentDevUser()` and renders `ManagedSavingsPageClient`.
+- `src/app/[locale]/managed-savings/page.tsx` — Same refactoring as canonical route.
+- `src/components/managed-savings/AddManagedFundModal.tsx` — Now calls `createManagedSavingsHolding` server action. Added notes textarea and owner dropdown. Removed mock-only behavior.
+- `src/components/managed-savings/EditManagedFundModal.tsx` — Now calls `updateManagedSavingsHolding` and `archiveManagedSavingsHolding`. Fixed type field from free text to dropdown. Added notes textarea, owner dropdown, and archive button (two-click confirm).
+- `src/components/managed-savings/ExpandedManagedSavingsRow.tsx` — Added notes section (shown only in expanded row, never in main table).
+- `src/components/managed-savings/ManagedSavingsTable.tsx` — Fixed hardcoded Hebrew product labels to use i18n. Removed vestigial `onInvestmentChange` usage.
+- `src/messages/he.json` — Added: `table.investmentsCount`, `emptyState`, `emptyStateSubtitle`, `errors.*`, `modal.archive`, `modal.archiveConfirm`, `modal.ownership`, `modal.notes`, `modal.notesPlaceholder`, `expandedView.notes`, `expandedView.noNotes`. Updated `modal.mockDataNote` to reflect DB persistence.
+- `src/messages/en.json` — Same additions.
+
+#### Cache and invalidation design
+- DB read function: `getManagedSavingsHoldingsForCurrentDevUser` in `src/lib/data/managed-savings.ts`
+- Cache mechanism: Next.js `unstable_cache` (server-side, not browser storage)
+- Cache key: `["managed-savings-dev-user"]`
+- Cache tag: `managed-savings:dev-user`
+- Invalidation: `revalidateTag("managed-savings:dev-user")` called in all three server actions after successful DB write
+- Page refresh after mutation: client calls `router.refresh()` to trigger server component re-render with fresh cached data
+- Result: repeated page loads use cached data; DB is only re-queried after a write mutation invalidates the cache
+- Admin cache UI: deferred (not in Phase 2B scope)
+- TODO in code: replace dev-user cache tag with `managed-savings:user:${userId}` when Auth.js is introduced
+
 ### Non-Scope
 
 - No Data.gov.il API calls.
@@ -450,3 +495,39 @@ Convert the approved Managed Savings mock page into a DB-backed single-user/dev 
 - `npx tsc --noEmit` — must pass
 - Browser QA: load page, add holding, edit holding, verify persistence after refresh
 - Confirm no data leakage in URLs or logs
+
+### Phase 2B-2 QA Fixes (applied 2026-06-29)
+
+Two rounds of QA fixes applied on the same branch (`feature/managed-savings-actions`):
+
+#### Fix Round 1 — Immediate UI updates and delete confirmation modal
+
+- **Problem**: Add/edit/archive mutations required a manual browser refresh to see changes. `router.refresh()` is async and doesn't immediately update the visible list.
+- **Fix**: `ManagedSavingsPageClient` now holds local `useState(initialInvestments)`. Server actions (`createManagedSavingsHolding`, `updateManagedSavingsHolding`) return the serialized holding in the `ok: true` branch. Handlers update local state immediately, then call `router.refresh()` in background.
+- **Problem**: Archive button used a two-click inline confirm ("ארכב" → "לאשר ארכוב?") with incorrect language.
+- **Fix**: Replaced with a single "מחק חיסכון" / "Delete holding" button in the edit modal footer. Clicking it opens a new `DeleteHoldingConfirmModal` component. The holding is soft-archived (status = `archived`), not hard-deleted.
+- **Files changed**: `managed-savings-actions.ts`, `ManagedSavingsPageClient.tsx`, `AddManagedFundModal.tsx`, `EditManagedFundModal.tsx`, new `DeleteHoldingConfirmModal.tsx`, `he.json`, `en.json`.
+
+#### Fix Round 2 — English LTR layout and duplicate menu
+
+- **Root cause 1 (duplicate menu)**: `app/[locale]/layout.tsx` rendered a full `<html><body>` + `RootLayoutProvider` → `AppShell` NESTED inside the root layout's `<html><body>` + AppShell. Two `AppShell` instances = two sidebars visible simultaneously.
+- **Root cause 2 (English RTL)**: The nested `<html lang="en" dir="ltr">` from the locale layout was ignored by browsers (nested html is invalid). The root layout's outer `<html lang="he" dir="rtl">` always won. Additionally, `AppShell` had `dir="rtl"` hardcoded on its container div.
+- **Root cause 3 (MobileDrawer hardcoded RTL)**: Drawer used `right-0` + `translate-x-full` (always slides from right). Navigation strings were hardcoded Hebrew, bypassing i18n.
+- **Fixes**:
+  - `app/layout.tsx` is now `async`, calls `getLocale()` from `next-intl/server` to set correct `lang` and `dir` dynamically for both Hebrew and English routes. Passes locale to `RootLayoutProvider`.
+  - `app/[locale]/layout.tsx` stripped to a minimal pass-through: only calls `setRequestLocale(locale)` and returns `{children}`. No html/body/AppShell rendered.
+  - `AppShell.tsx` — removed hardcoded `dir="rtl"` from flex container. Direction now inherited from `<html dir>`.
+  - `Sidebar.tsx` — uses `useLocale()` for direction-aware active indicator (`start-0` logical property), gradient direction, and collapse chevrons.
+  - `MobileDrawer.tsx` — uses `useLocale()` for direction-aware positioning (`right-0`/`left-0`) and slide transform. All hardcoded Hebrew strings replaced with `useTranslations("nav")` and `useTranslations("sidebar")`.
+  - `he.json` + `en.json` — added `sidebar.close` key.
+- **Side effect**: All previously-static SSG locale routes (`/[locale]/accounts`, `/[locale]/assets`, etc.) become `ƒ (Dynamic)` because the root layout reads from request headers. This is acceptable during development.
+- **Files changed**: `app/layout.tsx`, `app/[locale]/layout.tsx`, `AppShell.tsx`, `Sidebar.tsx`, `MobileDrawer.tsx`, `he.json`, `en.json`.
+
+#### Fix Round 3 — Locale resolution fix (route group architecture)
+
+- **Root cause**: `getLocale()` in `app/layout.tsx` reads from a React `cache()` slot populated by `setRequestLocale()`. The root layout renders BEFORE the `[locale]` layout in Next.js App Router. For `/en/*` routes, `setRequestLocale("en")` in `[locale]/layout.tsx` runs too late — the root layout's `getLocale()` call already returned "he" (default), so English routes received Hebrew messages, RTL direction, and the Hebrew AppShell.
+- **Fix — route group `(root)`**: Root layout is now truly minimal (`lang="he" dir="rtl"` static, no `getLocale()`, no `RootLayoutProvider`). Hebrew routes are wrapped by a new `app/(root)/layout.tsx` group layout that calls `setRequestLocale("he")` and renders `RootLayoutProvider("he")`. English routes keep `app/[locale]/layout.tsx` which calls `setRequestLocale(locale)` and renders `RootLayoutProvider(locale)`. Each shell layout owns its locale before rendering children.
+- **Fix — `SetHtmlAttributes` client component**: Because the root `<html>` element is statically set to `lang="he" dir="rtl"`, English routes use a new `SetHtmlAttributes` client component that patches `document.documentElement.lang` and `document.documentElement.dir` after hydration.
+- **Fix — `AppShell.tsx` direction-aware `dir` attribute**: Added `useLocale()` from next-intl and derives `dir` (`"rtl"` for Hebrew, `"ltr"` for English). Applied `dir={dir}` on the root flex container div so CSS direction cascade is correct even if the `<html dir>` attribute is patched asynchronously post-hydration.
+- **Fix — page migrations to `(root)` group**: Moved `app/page.tsx`, `app/managed-savings/page.tsx`, and `app/pension-gemel/page.tsx` into `app/(root)/` route group. The `pension-gemel` page had a pre-existing double-AppShell bug (the page wrapped itself in `<AppShell>` while also being inside the root layout's `AppShell`); the `(root)` group layout now provides the single shell.
+- **Files changed**: `app/layout.tsx` (rewritten minimal), new `app/(root)/layout.tsx`, new `app/(root)/page.tsx`, new `app/(root)/managed-savings/page.tsx`, new `app/(root)/pension-gemel/page.tsx` (AppShell wrapper removed), deleted `app/page.tsx`, deleted `app/managed-savings/page.tsx`, deleted `app/pension-gemel/page.tsx`, `app/[locale]/layout.tsx` (full English shell restored), new `src/components/layout/SetHtmlAttributes.tsx`, `AppShell.tsx` (added `useLocale()` + `dir` prop).

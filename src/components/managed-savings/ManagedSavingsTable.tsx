@@ -25,16 +25,6 @@ function getProductColor(type: string): string {
   return colors[type] || "bg-gray-100 text-gray-700";
 }
 
-function getProductLabel(type: string): string {
-  const labels: Record<string, string> = {
-    hishtalmut: "קרן השתלמות",
-    gemel: "קופת גמל",
-    hashkaa: "גמל להשקעה",
-    savings: "פוליסה",
-  };
-  return labels[type] || type;
-}
-
 export function ManagedSavingsTable({
   investments,
   customYears,
@@ -43,6 +33,13 @@ export function ManagedSavingsTable({
   const t = useTranslations("managedSavings");
   const tOwner = useTranslations("managedSavings.ownerLabels");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const typeLabels: Record<string, string> = {
+    hishtalmut: t("tableColumns.typeHishtalmut"),
+    gemel: t("tableColumns.typeGemel"),
+    hashkaa: t("tableColumns.typeHashkaa"),
+    savings: t("tableColumns.typeSavings"),
+  };
 
   const handleToggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -57,12 +54,14 @@ export function ManagedSavingsTable({
             <TrendingUp className="h-5 w-5 text-asset" />
             {t("pageTitle")}
           </h3>
-          <span className="text-sm font-medium text-muted-foreground">{investments.length} investments</span>
+          <span className="text-sm font-medium text-muted-foreground">
+            {t.rich("table.investmentsCount", { count: investments.length })}
+          </span>
         </div>
         <p className="text-sm text-muted-foreground">{t("pageSubtitle")}</p>
       </div>
 
-      {/* Table Container */}
+      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
           <thead>
@@ -137,8 +136,12 @@ export function ManagedSavingsTable({
                   </td>
                   <td className="h-14 px-4 py-3 text-start border-e border-border/15">
                     <div className="flex flex-col">
-                      <span className="font-bold text-foreground">{investment.name}</span>
-                      <span className="text-xs text-muted-foreground mt-0.5">{investment.officialFundId}</span>
+                      <span className="font-bold text-foreground">
+                        {investment.name}
+                      </span>
+                      <span className="text-xs text-muted-foreground mt-0.5">
+                        {investment.officialFundId}
+                      </span>
                     </div>
                   </td>
                   <td className="h-14 px-4 py-3 text-start border-e border-border/15">
@@ -147,42 +150,73 @@ export function ManagedSavingsTable({
                     </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-start border-e border-border/15">
-                    <span className={cn("inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold", getProductColor(investment.type))}>
-                      {getProductLabel(investment.type)}
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold",
+                        getProductColor(investment.type)
+                      )}
+                    >
+                      {typeLabels[investment.type] ?? investment.type}
                     </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-start border-e border-border/15">
                     <div className="flex flex-col">
-                      <span className="text-xs font-medium">{investment.managingCompany}</span>
-                      <span className="text-xs text-muted-foreground">{investment.track}</span>
+                      <span className="text-xs font-medium">
+                        {investment.managingCompany}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {investment.track}
+                      </span>
                     </div>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
-                    <span className="font-mono font-bold text-asset">{formatCurrency(investment.currentBalance)}</span>
+                    <span className="font-mono font-bold text-asset">
+                      {formatCurrency(investment.currentBalance)}
+                    </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
-                    <span className="font-mono text-sm text-muted-foreground">{formatCurrency(investment.monthlyContribution)}</span>
+                    <span className="font-mono text-sm text-muted-foreground">
+                      {formatCurrency(investment.monthlyContribution)}
+                    </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
-                    <span className="font-mono text-xs text-muted-foreground">{investment.accumulationFeePercent.toFixed(2)}%</span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {investment.accumulationFeePercent.toFixed(2)}%
+                    </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
-                    <span className="font-mono text-sm text-green-600 font-semibold">{formatPercent(investment.trackPerformance.last5Years)}</span>
+                    <span className="font-mono text-sm text-green-600 font-semibold">
+                      {formatPercent(investment.trackPerformance.last5Years)}
+                    </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
-                    <span className="font-mono text-sm font-semibold text-goal">{formatCurrency(investment.currentBalance * 1.08)}</span>
+                    <span className="font-mono text-sm font-semibold text-goal">
+                      {formatCurrency(investment.currentBalance * 1.08)}
+                    </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
-                    <span className="font-mono text-sm font-semibold text-goal">{formatCurrency(investment.currentBalance * 1.35)}</span>
+                    <span className="font-mono text-sm font-semibold text-goal">
+                      {formatCurrency(investment.currentBalance * 1.35)}
+                    </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
-                    <span className="font-mono text-sm font-semibold text-goal">{formatCurrency(investment.currentBalance * 1.85)}</span>
+                    <span className="font-mono text-sm font-semibold text-goal">
+                      {formatCurrency(investment.currentBalance * 1.85)}
+                    </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
-                    <span className="font-mono text-sm font-semibold text-goal">{formatCurrency(investment.currentBalance * 2.4)}</span>
+                    <span className="font-mono text-sm font-semibold text-goal">
+                      {formatCurrency(investment.currentBalance * 2.4)}
+                    </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end font-mono font-bold text-networth ps-6 border-s-2 border-networth/40">
-                    {formatCurrency(investment.currentBalance * Math.pow(1.06 - investment.accumulationFeePercent / 100, customYears))}
+                    {formatCurrency(
+                      investment.currentBalance *
+                        Math.pow(
+                          1.06 - investment.accumulationFeePercent / 100,
+                          customYears
+                        )
+                    )}
                   </td>
                   <td className="h-14 px-4 py-3 text-center">
                     <button

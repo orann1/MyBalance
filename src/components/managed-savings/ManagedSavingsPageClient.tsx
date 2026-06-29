@@ -2,46 +2,35 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Info, Plus } from "lucide-react";
-import { ManagedSavingsSummaryCards } from "@/components/managed-savings/ManagedSavingsSummaryCards";
-import { ManagedSavingsTable } from "@/components/managed-savings/ManagedSavingsTable";
-import { ManagedSavingsSummaryTable } from "@/components/managed-savings/ManagedSavingsSummaryTable";
-import { EditManagedFundModal } from "@/components/managed-savings/EditManagedFundModal";
-import { AddManagedFundModal } from "@/components/managed-savings/AddManagedFundModal";
+import { ManagedSavingsSummaryCards } from "./ManagedSavingsSummaryCards";
+import { ManagedSavingsTable } from "./ManagedSavingsTable";
+import { ManagedSavingsSummaryTable } from "./ManagedSavingsSummaryTable";
+import { EditManagedFundModal } from "./EditManagedFundModal";
+import { AddManagedFundModal } from "./AddManagedFundModal";
+import { DeleteHoldingConfirmModal } from "./DeleteHoldingConfirmModal";
 import {
-  getMockManagedSavingsData,
   calculateTotalSummary,
   type ManagedSavingsInvestment,
 } from "@/lib/mock/managed-savings-data";
 
-export default function ManagedSavingsPage() {
+interface ManagedSavingsPageClientProps {
+  initialInvestments: ManagedSavingsInvestment[];
+}
+
+export function ManagedSavingsPageClient({
+  initialInvestments,
+}: ManagedSavingsPageClientProps) {
   const t = useTranslations("managedSavings");
+  const router = useRouter();
   const [customYears, setCustomYears] = useState(20);
-  const [investments, setInvestments] = useState<ManagedSavingsInvestment[]>(
-    getMockManagedSavingsData()
-  );
-  const [editingInvestment, setEditingInvestment] = useState<ManagedSavingsInvestment | null>(null);
+  const [investments, setInvestments] = useState(initialInvestments);
+  const [editingInvestment, setEditingInvestment] =
+    useState<ManagedSavingsInvestment | null>(null);
+  const [deletingInvestment, setDeletingInvestment] =
+    useState<ManagedSavingsInvestment | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-
-  const handleInvestmentChange = (investment: ManagedSavingsInvestment) => {
-    setInvestments((prev) =>
-      prev.map((inv) => (inv.id === investment.id ? investment : inv))
-    );
-  };
-
-  const handleEditClick = (investment: ManagedSavingsInvestment) => {
-    setEditingInvestment(investment);
-  };
-
-  const handleEditSave = (investment: ManagedSavingsInvestment) => {
-    handleInvestmentChange(investment);
-    setEditingInvestment(null);
-  };
-
-  const handleAddFund = (newInvestment: ManagedSavingsInvestment) => {
-    setInvestments((prev) => [...prev, newInvestment]);
-    setShowAddModal(false);
-  };
 
   const totalCurrentValue = investments.reduce(
     (sum, inv) => sum + inv.currentBalance,
@@ -55,6 +44,31 @@ export default function ManagedSavingsPage() {
   const fiveYearSummary = calculateTotalSummary(investments, 5);
   const tenYearSummary = calculateTotalSummary(investments, 10);
   const customYearSummary = calculateTotalSummary(investments, customYears);
+
+  const handleAddSuccess = (holding: ManagedSavingsInvestment) => {
+    setInvestments((prev) => [...prev, holding]);
+    setShowAddModal(false);
+    router.refresh();
+  };
+
+  const handleEditSuccess = (holding: ManagedSavingsInvestment) => {
+    setInvestments((prev) =>
+      prev.map((inv) => (inv.id === holding.id ? holding : inv))
+    );
+    setEditingInvestment(null);
+    router.refresh();
+  };
+
+  const handleDeleteRequest = (investment: ManagedSavingsInvestment) => {
+    setEditingInvestment(null);
+    setDeletingInvestment(investment);
+  };
+
+  const handleDeleteSuccess = (id: string) => {
+    setInvestments((prev) => prev.filter((inv) => inv.id !== id));
+    setDeletingInvestment(null);
+    router.refresh();
+  };
 
   return (
     <div className="space-y-8 pb-8">
@@ -70,16 +84,22 @@ export default function ManagedSavingsPage() {
 
       {/* Custom Horizon Selector */}
       <div className="flex items-center gap-4 bg-card rounded-2xl p-4 border border-border/40 shadow-card">
-        <label className="text-sm font-semibold text-foreground">{t("customHorizon")}</label>
+        <label className="text-sm font-semibold text-foreground">
+          {t("customHorizon")}
+        </label>
         <input
           type="number"
           min="1"
           max="50"
           value={customYears}
-          onChange={(e) => setCustomYears(Math.max(1, Number(e.target.value)))}
+          onChange={(e) =>
+            setCustomYears(Math.max(1, Number(e.target.value)))
+          }
           className="w-24 px-3 py-2 rounded-lg border border-border bg-background text-sm font-mono font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-asset"
         />
-        <span className="text-sm font-medium text-muted-foreground">{t("years")}</span>
+        <span className="text-sm font-medium text-muted-foreground">
+          {t("years")}
+        </span>
       </div>
 
       {/* Summary Cards */}
@@ -95,9 +115,7 @@ export default function ManagedSavingsPage() {
       {/* Main Investments Table */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl md:text-2xl font-bold">
-            {t("pageTitle")}
-          </h2>
+          <h2 className="text-xl md:text-2xl font-bold">{t("pageTitle")}</h2>
           <button
             onClick={() => setShowAddModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-asset text-white font-medium text-sm hover:bg-asset/90 transition-colors"
@@ -106,35 +124,42 @@ export default function ManagedSavingsPage() {
             {t("addFundButton")}
           </button>
         </div>
-        <ManagedSavingsTable
-          investments={investments}
-          customYears={customYears}
-          onInvestmentChange={handleInvestmentChange}
-          onEditClick={handleEditClick}
-        />
+
+        {investments.length === 0 ? (
+          <div className="rounded-3xl bg-card border border-border/60 shadow-card p-12 text-center">
+            <p className="text-lg font-semibold text-foreground mb-2">
+              {t("emptyState")}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {t("emptyStateSubtitle")}
+            </p>
+          </div>
+        ) : (
+          <ManagedSavingsTable
+            investments={investments}
+            customYears={customYears}
+            onEditClick={setEditingInvestment}
+          />
+        )}
       </div>
 
       {/* Summary Table */}
-      <div className="space-y-4">
-        <h2 className="text-xl md:text-2xl font-bold">
-          {t("projectionsLabel")}
-        </h2>
-        <ManagedSavingsSummaryTable
-          investments={investments}
-          customYears={customYears}
-        />
-      </div>
+      {investments.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-xl md:text-2xl font-bold">
+            {t("projectionsLabel")}
+          </h2>
+          <ManagedSavingsSummaryTable
+            investments={investments}
+            customYears={customYears}
+          />
+        </div>
+      )}
 
       {/* Disclaimers */}
       <div className="rounded-3xl bg-card border border-border/60 shadow-card p-4 md:p-6 space-y-4">
-        <h3 className="font-bold text-base">Important Information</h3>
+        <h3 className="font-bold text-base">{t("disclaimers.informational")}</h3>
         <div className="space-y-3">
-          <div className="flex items-start gap-3">
-            <Info className="h-5 w-5 text-asset shrink-0 mt-0.5" />
-            <p className="text-sm text-muted-foreground">
-              {t("disclaimers.informational")}
-            </p>
-          </div>
           <div className="flex items-start gap-3">
             <Info className="h-5 w-5 text-asset shrink-0 mt-0.5" />
             <p className="text-sm text-muted-foreground">
@@ -162,7 +187,18 @@ export default function ManagedSavingsPage() {
           investment={editingInvestment}
           isOpen={!!editingInvestment}
           onClose={() => setEditingInvestment(null)}
-          onSave={handleEditSave}
+          onSaveSuccess={handleEditSuccess}
+          onDeleteRequest={handleDeleteRequest}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingInvestment && (
+        <DeleteHoldingConfirmModal
+          investment={deletingInvestment}
+          isOpen={!!deletingInvestment}
+          onClose={() => setDeletingInvestment(null)}
+          onSuccess={handleDeleteSuccess}
         />
       )}
 
@@ -170,7 +206,7 @@ export default function ManagedSavingsPage() {
       <AddManagedFundModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onAdd={handleAddFund}
+        onAddSuccess={handleAddSuccess}
       />
     </div>
   );

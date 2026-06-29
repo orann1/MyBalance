@@ -318,3 +318,54 @@ Branch History:
 - Feature branch: feature/managed-savings-persistence
 - Merged into: master
 - Commit: feat: add managed savings persistence infrastructure
+
+## Phase 2B-2 — Managed Savings DB-backed Actions and UI
+
+Status: Completed (2026-06-29)
+
+Note: Phase 2B-2 builds on Phase 2B-1 (infrastructure / schema / seed). It converts the Managed Savings page from mock data to DB-backed persistence via server actions.
+
+Completed:
+- **Data loading:** Managed Savings page now loads holdings from PostgreSQL via a cached server-side data access layer (`getManagedSavingsHoldingsForCurrentDevUser`). `unstable_cache` is used with cache tag `managed-savings:dev-user`. DB is queried only on cache miss or after a write mutation.
+- **Server actions:** `createManagedSavingsHolding`, `updateManagedSavingsHolding`, `archiveManagedSavingsHolding` — all implemented as Next.js Server Actions (`"use server"`).
+- **Zod validation:** All three server actions validate inputs with dedicated Zod schemas (`CreateManagedSavingsSchema`, `UpdateManagedSavingsSchema`, `ArchiveManagedSavingsSchema`). Validation runs on the server; the client sends UI-friendly values.
+- **Unit conversion:** Money values are submitted as ILS amounts and stored as integer agorot (minor units via `toMinorUnits`). Fees are submitted as percentages and stored as basis points (`percentToBps`). Reverse conversions applied on read.
+- **Ownership checks:** `updateManagedSavingsHolding` and `archiveManagedSavingsHolding` verify the holding belongs to the dev user before writing.
+- **Soft archive:** Archive is implemented as `status = "archived"` (soft delete). No hard DB deletes. Internal wording is "archive"; user-facing wording is "מחק חיסכון" / "Delete holding".
+- **Immediate UI updates:** Add and edit server actions return the serialized holding on success. `ManagedSavingsPageClient` updates local `useState` immediately (no manual refresh needed), then calls `router.refresh()` in background to align server-rendered cache.
+- **Cache invalidation:** All three server actions call `revalidateTag("managed-savings:dev-user")` after a successful DB write. Next.js 16 requires a second argument: `revalidateTag(tag, {})`.
+- **Delete confirmation modal:** Single "מחק חיסכון" / "Delete holding" button in the edit modal footer opens `DeleteHoldingConfirmModal` (z-[60]). Replaces prior two-click inline archive UX.
+- **Notes:** Editable in the edit modal. Displayed only in expanded rows — never in the main table. Never exposed in URLs or logs.
+- **English LTR and duplicate menu fix (QA Fix Round 2):** Root cause was `[locale]/layout.tsx` rendering nested `<html><body>` + double `AppShell`. Fixed by stripping the locale layout to a minimal pass-through and making `AppShell` direction-aware. `MobileDrawer` and `Sidebar` use `useLocale()` for direction-aware positioning and logical Tailwind properties.
+- **Locale resolution fix (QA Fix Round 3):** Root cause was `getLocale()` in `app/layout.tsx` always returning "he" because it ran before `setRequestLocale("en")` in nested layouts. Fixed with a `(root)` route group: root layout is now truly minimal; Hebrew routes use `(root)/layout.tsx` for their shell; English routes use `[locale]/layout.tsx` for their shell. `SetHtmlAttributes` client component patches `<html lang/dir>` after hydration for English routes. `AppShell` applies `dir={dir}` on its container div from `useLocale()` so layout direction is correct from first SSR paint.
+
+Out of Scope (Not Implemented in Phase 2B-2):
+- Auth.js or production multi-user isolation (dev-user stub retained)
+- Data.gov.il / GemelNet / PensionNet sync
+- PublicFund or FundReturn models
+- Public track performance (remains mock/fallback until Phase 2C)
+- Admin cache UI
+- localStorage as source of truth for financial data
+- Net worth snapshot integration
+- Neon remote DB migration
+
+Known Deferred Item:
+- For English routes (`/en/*`), the `<html lang/dir>` attributes in the initial server-rendered HTML are `he/rtl` (from the root layout). They are corrected to `en/ltr` after client hydration by `SetHtmlAttributes`. No visible layout flash occurs because `AppShell` renders with `dir="ltr"` in SSR HTML. This should be revisited in a dedicated i18n hardening task.
+
+Automated Checks:
+- ESLint: clean (0 errors, 0 warnings)
+- TypeScript: no errors (`npx tsc --noEmit`)
+- Build: successful (`npm run build`, 24 routes, pre-existing `ENVIRONMENT_FALLBACK` warning only)
+- Prisma validate: schema valid
+- Prisma generate: client generated cleanly
+
+Browser QA (user-confirmed):
+- `/en/managed-savings` renders English text, LTR layout, sidebar on left
+- `document.documentElement.lang` returns `"en"` after hydration
+- `document.documentElement.dir` returns `"ltr"` after hydration
+- Hebrew routes unaffected
+
+Branch History:
+- Feature branch: feature/managed-savings-actions
+- Merged into: master
+- Commit: feat: persist managed savings holdings

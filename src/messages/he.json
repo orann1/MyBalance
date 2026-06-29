@@ -22,7 +22,8 @@
   },
   "sidebar": {
     "subtitle": "תמונת הון אישית",
-    "sampleData": "הנתונים להמחשה בלבד."
+    "sampleData": "הנתונים להמחשה בלבד.",
+    "close": "סגור"
   },
   "dashboard": {
     "greeting": "שלום, אורן",
@@ -248,7 +249,9 @@
         "addDeposit": "הפקדה חד פעמית",
         "changeFees": "שינוי עמלות",
         "changeTrack": "שינוי קרן"
-      }
+      },
+      "notes": "הערות אישיות",
+      "noNotes": "אין הערות"
     },
     "summaryTable": {
       "title": "סיכום חיסכון מנוהל",
@@ -288,6 +291,16 @@
     "last10Years": "10 שנים",
     "lastUpdated": "עודכן לאחרונה",
     "addFundButton": "הוסף קרן",
+    "table": {
+      "investmentsCount": "{count} קרנות"
+    },
+    "emptyState": "אין קרנות חיסכון מנוהל פעילות",
+    "emptyStateSubtitle": "הוסף קרן חדשה כדי להתחיל לעקוב אחרי החיסכון המנוהל שלך",
+    "errors": {
+      "createFailed": "שמירת הקרן נכשלה. נסה שוב.",
+      "updateFailed": "עדכון הקרן נכשל. נסה שוב.",
+      "archiveFailed": "ארכוב הקרן נכשל. נסה שוב."
+    },
     "modal": {
       "editFund": "עריכת קרן",
       "editSubtitle": "עדכן את פרטי הקרן המשמשים לחישובי התחזוקה",
@@ -296,13 +309,22 @@
       "cancel": "ביטול",
       "save": "שמור",
       "add": "הוסף",
+      "deleteButton": "מחק חיסכון",
       "investmentIdentity": "זהות הקרן",
       "fundDetails": "פרטי הקרן",
       "assumptions": "ההנחות שלך",
-      "mockDataNote": "השינויים זמניים לחוויה זו בלבד והם יתאפסו לאחר רענון הדף.",
+      "ownership": "בעלות",
+      "notes": "הערות אישיות",
+      "notesPlaceholder": "הערות אישיות (לא יוצגו בטבלה הראשית)",
+      "mockDataNote": "השינויים נשמרים בבסיס הנתונים המקומי.",
       "investmentNamePlaceholder": "לדוגמה, חשבון החיסכון שלי",
       "companyPlaceholder": "לדוגמה, בנק לאומי",
       "trackPlaceholder": "לדוגמה, קרן שמרנית"
+    },
+    "deleteModal": {
+      "title": "למחוק את החיסכון?",
+      "body": "פעולה זו תסיר את הקרן \"{name}\" מהרשימה. לא ניתן לבטל פעולה זו.",
+      "confirm": "מחק"
     }
   }
 }

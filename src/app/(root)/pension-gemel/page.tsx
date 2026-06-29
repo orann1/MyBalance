@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Info } from "lucide-react";
-import { AppShell } from "@/components/layout/AppShell";
 import { PensionGemelSummaryCards } from "@/components/pension-gemel/PensionGemelSummaryCards";
 import { PensionGemelTable } from "@/components/pension-gemel/PensionGemelTable";
 import { PensionGemelSummaryTables } from "@/components/pension-gemel/PensionGemelSummaryTables";
@@ -49,8 +48,7 @@ export default function PensionGemelPage() {
   );
 
   return (
-    <AppShell>
-      <div className="space-y-8">
+    <div className="space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-3xl md:text-4xl font-extrabold mb-2">
@@ -154,7 +152,6 @@ export default function PensionGemelPage() {
           </div>
         </div>
       </div>
-      </div>
-    </AppShell>
+    </div>
   );
 }

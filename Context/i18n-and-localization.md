@@ -52,11 +52,23 @@ src/
 
 ```txt
 app/
-├── layout.tsx           # Root layout (sets lang="he" dir="rtl" for default)
-├── page.tsx             # Root page renders Hebrew (/) without prefix
+├── layout.tsx              # Root layout — truly minimal. Static lang="he" dir="rtl".
+│                           #   No locale detection, no RootLayoutProvider, no AppShell.
+├── (root)/
+│   ├── layout.tsx          # Hebrew group layout. Calls setRequestLocale("he"),
+│   │                       #   renders RootLayoutProvider("he") → AppShell.
+│   ├── page.tsx            # Hebrew dashboard (/) — inside (root) group, no URL impact.
+│   ├── managed-savings/
+│   │   └── page.tsx        # /managed-savings — Hebrew managed savings
+│   └── pension-gemel/
+│       └── page.tsx        # /pension-gemel — Hebrew pension/gemel
 └── [locale]/
-    ├── layout.tsx       # Locale-specific layout (sets lang/dir per locale)
-    ├── page.tsx         # Locale-specific pages (/en, /he)
+    ├── layout.tsx          # Locale layout. Calls setRequestLocale(locale),
+    │                       #   renders SetHtmlAttributes + RootLayoutProvider(locale).
+    ├── managed-savings/
+    │   └── page.tsx        # /en/managed-savings — English managed savings
+    ├── pension-gemel/
+    │   └── page.tsx        # /en/pension-gemel — English pension/gemel
     ├── accounts/
     ├── assets/
     ├── liabilities/
@@ -65,17 +77,35 @@ app/
 ```
 
 Routing structure:
-- `/` → Hebrew via root page (unprefixed, canonical Hebrew route)
-- `/en` → English via [locale] page
+- `/` → Hebrew via `(root)/page.tsx` (unprefixed, canonical Hebrew route)
+- `/managed-savings` → Hebrew via `(root)/managed-savings/page.tsx`
+- `/pension-gemel` → Hebrew via `(root)/pension-gemel/page.tsx`
+- `/en` → English via `[locale]/layout.tsx`
+- `/en/managed-savings` → English via `[locale]/managed-savings/page.tsx`
 - `/he` → redirects to `/` (no separate Hebrew-prefixed route)
+
+## Why Route Group `(root)` is Required
+
+`next-intl`'s `getLocale()` and `useLocale()` read from a React `cache()` slot that is populated by `setRequestLocale(locale)`. In Next.js App Router, the root layout renders BEFORE any nested layout.
+
+**Problem (pre-Round 3)**: If `app/layout.tsx` called `getLocale()` to determine direction, it always received the default locale ("he") — because `setRequestLocale("en")` in `[locale]/layout.tsx` had not yet run. English routes received Hebrew messages and RTL direction.
+
+**Solution**: `app/layout.tsx` is statically minimal — it does not read locale at all. Each shell layout (`(root)/layout.tsx` for Hebrew, `[locale]/layout.tsx` for English) calls `setRequestLocale()` first, then renders `RootLayoutProvider` (which mounts `NextIntlClientProvider` + `AppShell`). This guarantees locale is set before any locale-dependent code runs.
 
 ## HTML Direction
 
-Set:
+The root `<html>` element is statically set to `lang="he" dir="rtl"` in `app/layout.tsx`.
+
+For English routes, `src/components/layout/SetHtmlAttributes.tsx` (a client component) patches `document.documentElement` after hydration:
 
 ```tsx
-<html lang={locale} dir={direction}>
+useEffect(() => {
+  document.documentElement.setAttribute("lang", locale);
+  document.documentElement.setAttribute("dir", dir);
+}, [locale, dir]);
 ```
+
+`AppShell.tsx` also applies `dir={dir}` explicitly on its root flex container div (derived from `useLocale()`) so that CSS direction cascade is correct within the shell even before the `<html>` patch completes.
 
 Locale direction map:
 
@@ -131,6 +161,16 @@ Avoid hardcoded physical direction unless needed.
 
 Not all chart behavior should flip in RTL.
 Usually keep financial time-series charts chronological from left to right.
+
+## Known Limitations
+
+**`<html lang/dir>` is `he/rtl` in the initial server-rendered HTML for all routes, including `/en/*`.**
+
+The root layout (`app/layout.tsx`) statically sets `lang="he" dir="rtl"` on the `<html>` element and cannot be overridden by nested layouts in Next.js App Router. `SetHtmlAttributes` corrects `document.documentElement.lang` and `document.documentElement.dir` for English routes after client hydration.
+
+There is no visible layout flash because `AppShell` (a client component) is SSR-rendered with `dir="ltr"` on its container div for English routes, which overrides the `<html dir>` attribute for all content within it from the first paint.
+
+The `<html lang>` attribute in the raw HTML response will show `he` for English routes until JavaScript loads. This is a minor SEO and accessibility concern. It should be addressed in a dedicated i18n hardening task — not in Phase 2B scope.
 
 ## Documentation Impact
 

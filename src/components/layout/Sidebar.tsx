@@ -1,7 +1,7 @@
 "use client";
 
 import { Link, usePathname } from "@/i18n/routing";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   LayoutDashboard,
   Wallet,
@@ -46,6 +46,8 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
   const t = useTranslations("nav");
   const tSidebar = useTranslations("sidebar");
   const pathname = usePathname();
+  const locale = useLocale();
+  const isRTL = locale === "he";
 
   const isActive = (href: string) => pathname === href || (href === "/" && pathname === "/");
 
@@ -71,7 +73,10 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
             className="ms-auto hidden h-8 w-8 place-items-center rounded-lg text-muted-foreground hover:bg-secondary lg:grid"
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            {isRTL
+              ? (collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)
+              : (collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />)
+            }
           </button>
         )}
       </div>
@@ -98,13 +103,16 @@ export function Sidebar({ collapsed = false, onToggleCollapse }: SidebarProps) {
                 "group relative flex items-center gap-3 rounded-2xl px-2.5 py-3 text-base font-semibold text-muted-foreground transition-all",
                 "hover:bg-secondary/60 hover:text-foreground",
                 collapsed && "justify-center",
-                active && "bg-gradient-to-l from-primary/20 via-primary/12 to-transparent text-foreground"
+                active && (isRTL
+                  ? "bg-gradient-to-l from-primary/20 via-primary/12 to-transparent text-foreground"
+                  : "bg-gradient-to-r from-primary/20 via-primary/12 to-transparent text-foreground"
+                )
               )}
             >
               {active && (
                 <span
                   aria-hidden
-                  className="absolute inset-y-2 right-0 w-1 rounded-full bg-gradient-networth"
+                  className="absolute inset-y-2 start-0 w-1 rounded-full bg-gradient-networth"
                 />
               )}
               <span

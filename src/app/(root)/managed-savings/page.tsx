@@ -1,12 +1,13 @@
 import { getManagedSavingsHoldingsForCurrentDevUser } from "@/lib/data/managed-savings";
 import { ManagedSavingsPageClient } from "@/components/managed-savings/ManagedSavingsPageClient";
 
-// Force server-side rendering so the DB-backed data is always fresh per request.
+// Force server-side rendering on every request so the DB-backed data is always fresh.
+// unstable_cache handles read-level caching; this prevents static pre-rendering.
 export const dynamic = "force-dynamic";
 
-// Server component: locale-specific route (/en/managed-savings).
-// Loads holdings from the same cached data access layer as the canonical Hebrew route.
-export default async function LocaleManagedSavingsPage() {
+// Server component: fetches DB-backed holdings via the cached data access layer
+// and passes them to the client component for rendering and interaction.
+export default async function ManagedSavingsPage() {
   const investments = await getManagedSavingsHoldingsForCurrentDevUser();
   return <ManagedSavingsPageClient initialInvestments={investments} />;
 }

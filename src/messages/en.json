@@ -22,7 +22,8 @@
   },
   "sidebar": {
     "subtitle": "Personal wealth snapshot",
-    "sampleData": "Data for demonstration purposes only."
+    "sampleData": "Data for demonstration purposes only.",
+    "close": "Close"
   },
   "dashboard": {
     "greeting": "Hello, Oran",
@@ -248,7 +249,9 @@
         "addDeposit": "Add One-Time Deposit",
         "changeFees": "Change Fees",
         "changeTrack": "Change Track"
-      }
+      },
+      "notes": "Personal Notes",
+      "noNotes": "No notes"
     },
     "summaryTable": {
       "title": "Managed Savings Summary",
@@ -288,6 +291,16 @@
     "last10Years": "Last 10 Years",
     "lastUpdated": "Last Updated",
     "addFundButton": "Add Fund",
+    "table": {
+      "investmentsCount": "{count} funds"
+    },
+    "emptyState": "No active managed savings holdings",
+    "emptyStateSubtitle": "Add a new holding to start tracking your managed savings",
+    "errors": {
+      "createFailed": "Failed to save holding. Please try again.",
+      "updateFailed": "Failed to update holding. Please try again.",
+      "archiveFailed": "Failed to archive holding. Please try again."
+    },
     "modal": {
       "editFund": "Edit Fund",
       "editSubtitle": "Update the fund details used for projections",
@@ -296,13 +309,22 @@
       "cancel": "Cancel",
       "save": "Save",
       "add": "Add",
+      "deleteButton": "Delete holding",
       "investmentIdentity": "Fund Identity",
       "fundDetails": "Fund Details",
       "assumptions": "Your Assumptions",
-      "mockDataNote": "Changes are temporary for this mock experience and will reset after refresh.",
+      "ownership": "Ownership",
+      "notes": "Personal Notes",
+      "notesPlaceholder": "Personal notes (not shown in main table)",
+      "mockDataNote": "Changes are saved to the local database.",
       "investmentNamePlaceholder": "e.g., My Savings Account",
       "companyPlaceholder": "e.g., Bank Leumi",
       "trackPlaceholder": "e.g., Conservative Track"
+    },
+    "deleteModal": {
+      "title": "Delete holding?",
+      "body": "This will remove \"{name}\" from your list. This action cannot be undone.",
+      "confirm": "Delete"
     }
   }
 }

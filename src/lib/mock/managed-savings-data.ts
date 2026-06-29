@@ -13,6 +13,8 @@ export interface ManagedSavingsInvestment {
   status: "active" | "inactive";
   officialFundId?: string;
   trackPerformance: TrackPerformance;
+  // Personal notes — displayed in expanded row only, not in the main table.
+  notes?: string;
 }
 
 export interface TrackPerformance {
