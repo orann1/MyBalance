@@ -218,7 +218,6 @@
       "editableInputs": "Editable Values",
       "publicTrackPerformance": "Public Track Performance",
       "detailedSimulation": "Detailed Simulation",
-      "mockActions": "Mock Actions",
       "name": "Investment Name",
       "owner": "Owner",
       "productType": "Product Type",
@@ -292,8 +291,12 @@
     "lastUpdated": "Last Updated",
     "addFundButton": "Add Fund",
     "table": {
-      "investmentsCount": "{count} funds"
+      "investmentsCount": "{count, plural, one {# fund} other {# funds}}",
+      "expandSr": "Expand row",
+      "actionsSr": "Actions",
+      "editTitle": "Edit"
     },
+    "holdingsTitle": "Your Holdings",
     "emptyState": "No active managed savings holdings",
     "emptyStateSubtitle": "Add a new holding to start tracking your managed savings",
     "errors": {
@@ -308,7 +311,9 @@
       "addSubtitle": "Enter fund details to simulate future accumulation",
       "cancel": "Cancel",
       "save": "Save",
+      "saving": "Saving...",
       "add": "Add",
+      "adding": "Adding...",
       "deleteButton": "Delete holding",
       "investmentIdentity": "Fund Identity",
       "fundDetails": "Fund Details",

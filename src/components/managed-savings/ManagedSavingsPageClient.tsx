@@ -115,7 +115,7 @@ export function ManagedSavingsPageClient({
       {/* Main Investments Table */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl md:text-2xl font-bold">{t("pageTitle")}</h2>
+          <h2 className="text-xl md:text-2xl font-bold">{t("holdingsTitle")}</h2>
           <button
             onClick={() => setShowAddModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-asset text-white font-medium text-sm hover:bg-asset/90 transition-colors"

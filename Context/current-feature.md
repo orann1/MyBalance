@@ -2,7 +2,7 @@
 
 ## Feature Name
 
-Phase 2B-2 — Managed Savings DB-backed Actions and UI
+Phase 2B-3 — Managed Savings Hardening & QA Audit
 
 ### Phase Breakdown
 
@@ -11,16 +11,22 @@ Phase 2B-2 — Managed Savings DB-backed Actions and UI
 - **Phase 2A: Managed Savings Mock Experience** — COMPLETED & APPROVED
 - **Phase 2B-1: Managed Savings Persistence Infrastructure** — COMPLETED (2026-06-29)
 - **Phase 2B-2: Managed Savings DB-backed Actions and UI** — COMPLETED (2026-06-29)
-- **Phase 2B-3 and beyond** — Not started
+- **Phase 2B-3: Managed Savings Hardening & QA Audit** — IN PROGRESS (2026-06-29)
+- **Phase 2C and beyond** — Not started
 
 ## Status
 
 Phase 1A: Complete and Approved
 Phase 1B: Complete and Approved
 Phase 2A: **COMPLETED AND APPROVED** (2026-06-28)
+Phase 2B: **COMPLETED AND VERIFIED** (2026-06-29)
+  - 2B-1: Persistence Infrastructure — COMPLETED (2026-06-29)
+  - 2B-2: DB-backed Actions and UI — COMPLETED AND VERIFIED (2026-06-29)
+  - 2B-3: Hardening & QA Audit — COMPLETED AND VERIFIED (2026-06-29)
+Phase 2C and beyond: Not started
 Phase 2B-1: **COMPLETED** (2026-06-29)
 Phase 2B-2: **COMPLETED AND VERIFIED** (2026-06-29)
-Phase 2B-3: Not started
+Phase 2B-3: **COMPLETED AND VERIFIED** (2026-06-29)
 
 ## Known Limitations / Deferred Items
 
@@ -531,3 +537,61 @@ Two rounds of QA fixes applied on the same branch (`feature/managed-savings-acti
 - **Fix — `AppShell.tsx` direction-aware `dir` attribute**: Added `useLocale()` from next-intl and derives `dir` (`"rtl"` for Hebrew, `"ltr"` for English). Applied `dir={dir}` on the root flex container div so CSS direction cascade is correct even if the `<html dir>` attribute is patched asynchronously post-hydration.
 - **Fix — page migrations to `(root)` group**: Moved `app/page.tsx`, `app/managed-savings/page.tsx`, and `app/pension-gemel/page.tsx` into `app/(root)/` route group. The `pension-gemel` page had a pre-existing double-AppShell bug (the page wrapped itself in `<AppShell>` while also being inside the root layout's `AppShell`); the `(root)` group layout now provides the single shell.
 - **Files changed**: `app/layout.tsx` (rewritten minimal), new `app/(root)/layout.tsx`, new `app/(root)/page.tsx`, new `app/(root)/managed-savings/page.tsx`, new `app/(root)/pension-gemel/page.tsx` (AppShell wrapper removed), deleted `app/page.tsx`, deleted `app/managed-savings/page.tsx`, deleted `app/pension-gemel/page.tsx`, `app/[locale]/layout.tsx` (full English shell restored), new `src/components/layout/SetHtmlAttributes.tsx`, `AppShell.tsx` (added `useLocale()` + `dir` prop).
+
+---
+
+## Phase 2B-3: Managed Savings Hardening & QA Audit
+
+### Status
+
+**COMPLETED AND VERIFIED** (2026-06-29) — Product Owner QA approved. Changes committed to master.
+
+### Goal
+
+Fix audit findings identified after Phase 2B-2 was merged. Focus on UX correctness, projection consistency, i18n cleanup, validation hardening, and code quality. No new features, no schema changes, no external APIs.
+
+### Scope
+
+- **Delete/archive error feedback:** `DeleteHoldingConfirmModal` now shows a translated error message (`errors.archiveFailed`) when `archiveManagedSavingsHolding` returns `ok: false`. Modal stays open for retry.
+- **Projection consistency:** Per-row projection columns in `ManagedSavingsTable` (1Y, 5Y, 10Y, 15Y, custom) now use `projectSimulations(investment, customYears)` — the same helper used by summary cards. Monthly contributions and accumulation fees are factored in. Hardcoded multipliers removed.
+- **i18n — hardcoded strings:** Removed hardcoded English `sr-only "Expand"`, `sr-only "Actions"`, and `title="Edit"` from `ManagedSavingsTable`. Added translation keys `table.expandSr`, `table.actionsSr`, `table.editTitle` in both `he.json` and `en.json`.
+- **i18n — duplicate key:** Removed stale string form `"mockActions": "פעולות"` / `"Mock Actions"` from `managedSavings.expandedView` in both translation files. Object form retained.
+- **Pluralization:** `table.investmentsCount` updated to ICU plural syntax. Hebrew: `"{count, plural, one {קרן אחת} other {{count} קרנות}}"`. English: `"{count, plural, one {# fund} other {# funds}}"`. Component updated to use `t()` instead of `t.rich()`.
+- **Loading states:** Add modal save button shows `modal.adding` ("מוסיף..." / "Adding...") while pending. Edit modal save button shows `modal.saving` ("שומר..." / "Saving...") while pending.
+- **Section heading:** Page `h2` above the holdings table now uses `holdingsTitle` ("ההשקעות שלי" / "Your Holdings") instead of repeating `pageTitle`.
+- **Validation hardening:** `CreateManagedSavingsSchema` and `UpdateManagedSavingsSchema` now enforce `currentBalance: max(50_000_000)` and `monthlyContribution: max(500_000)`. Fee max bounds unchanged at 5%.
+- **Cleanup:** Removed dead `onInvestmentChange?` prop from `ManagedSavingsTable`. Removed unreachable `archived → inactive` status mapping in serializer (archived records are filtered out before serialization).
+
+### Files Changed
+
+Code:
+- `src/components/managed-savings/DeleteHoldingConfirmModal.tsx` — error state
+- `src/components/managed-savings/ManagedSavingsTable.tsx` — projections, sr-only, pluralization, dead prop
+- `src/components/managed-savings/AddManagedFundModal.tsx` — loading state
+- `src/components/managed-savings/EditManagedFundModal.tsx` — loading state
+- `src/components/managed-savings/ManagedSavingsPageClient.tsx` — section heading
+- `src/lib/validation/managed-savings.ts` — max value bounds
+- `src/lib/managed-savings/serializers.ts` — dead code removal
+
+Translations:
+- `src/messages/he.json` — pluralization, new keys, duplicate key removal
+- `src/messages/en.json` — same
+
+### Non-Scope
+
+- Phase 2C public fund sync
+- Data.gov.il / GemelNet / PensionNet
+- Auth.js / production multi-user isolation
+- SSR raw `<html lang/dir>` fix for English routes
+- Admin cache UI
+- Import/export
+- Pension page
+- Visual redesign
+
+### QA Requirements
+
+- `npm run lint` — must pass
+- `npx tsc --noEmit` — must pass
+- `npm run build` — must pass
+- `npm run db:validate` — must pass
+- Browser QA on both Hebrew and English managed savings routes

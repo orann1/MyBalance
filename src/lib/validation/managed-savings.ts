@@ -22,8 +22,9 @@ const baseFields = {
   name: z.string().min(1).max(200),
   type: z.enum(MANAGED_SAVINGS_TYPES),
   owner: z.enum(OWNER_LABELS),
-  currentBalance: z.number().min(0),
-  monthlyContribution: z.number().min(0),
+  // Balances: ILS major units. Upper bounds guard against obviously invalid input.
+  currentBalance: z.number().min(0).max(50_000_000),
+  monthlyContribution: z.number().min(0).max(500_000),
   // Fees: 0–5% range. Phase 2B only supports ILS; currency is enforced server-side.
   accumulationFeePercent: z.number().min(0).max(5),
   depositFeePercent: z.number().min(0).max(5),

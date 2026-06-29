@@ -218,7 +218,6 @@
       "editableInputs": "ערכים הניתנים לעריכה",
       "publicTrackPerformance": "ביצועי הקרן הציבוריים",
       "detailedSimulation": "סימולציה מפורטת",
-      "mockActions": "פעולות",
       "name": "שם ההשקעה",
       "owner": "בעלות",
       "productType": "סוג המוצר",
@@ -292,8 +291,12 @@
     "lastUpdated": "עודכן לאחרונה",
     "addFundButton": "הוסף קרן",
     "table": {
-      "investmentsCount": "{count} קרנות"
+      "investmentsCount": "{count, plural, one {קרן אחת} other {{count} קרנות}}",
+      "expandSr": "הרחב שורה",
+      "actionsSr": "פעולות",
+      "editTitle": "ערוך"
     },
+    "holdingsTitle": "ההשקעות שלי",
     "emptyState": "אין קרנות חיסכון מנוהל פעילות",
     "emptyStateSubtitle": "הוסף קרן חדשה כדי להתחיל לעקוב אחרי החיסכון המנוהל שלך",
     "errors": {
@@ -308,7 +311,9 @@
       "addSubtitle": "הזן את פרטי הקרן כדי לדמות צבירה עתידית",
       "cancel": "ביטול",
       "save": "שמור",
+      "saving": "שומר...",
       "add": "הוסף",
+      "adding": "מוסיף...",
       "deleteButton": "מחק חיסכון",
       "investmentIdentity": "זהות הקרן",
       "fundDetails": "פרטי הקרן",

@@ -376,7 +376,7 @@ export function EditManagedFundModal({
               disabled={isPending || !formData.name.trim()}
               className="px-4 py-2.5 text-sm font-bold text-white bg-asset rounded-lg hover:bg-asset/85 active:scale-95 transition-all duration-150 shadow-md hover:shadow-lg disabled:opacity-50"
             >
-              {t("modal.save")}
+              {isPending ? t("modal.saving") : t("modal.save")}
             </button>
           </div>
         </div>

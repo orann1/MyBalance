@@ -369,3 +369,75 @@ Branch History:
 - Feature branch: feature/managed-savings-actions
 - Merged into: master
 - Commit: feat: persist managed savings holdings
+
+## Phase 2B-3 — Managed Savings Hardening & QA Audit
+
+Status: **Completed and Verified** (2026-06-29)
+
+This phase addressed audit findings from Phase 2B-2 and hardened the Managed Savings feature for production readiness. No new features, no schema changes, no external APIs.
+
+Completed:
+- **Delete/archive error feedback:** `DeleteHoldingConfirmModal` now shows translated error message (`errors.archiveFailed`) when archive action fails. Modal stays open for retry. Error state added to component; reuses existing translation key.
+
+- **Projection consistency:** Per-row projection columns (1Y, 5Y, 10Y, 15Y, custom) in `ManagedSavingsTable` replaced hardcoded multipliers with `projectSimulations(investment, years)` — same helper used by summary cards. Now correctly includes:
+  - Current balance growth
+  - Monthly contributions compounding
+  - Accumulation fee deductions
+  - Results are consistent with summary card totals
+
+- **i18n — hardcoded string removal:** Removed three hardcoded English accessibility strings from `ManagedSavingsTable`:
+  - `sr-only "Expand"` → `t("table.expandSr")`
+  - `sr-only "Actions"` → `t("table.actionsSr")`
+  - `title="Edit"` → `title={t("table.editTitle")}`
+  - All added to both `he.json` and `en.json`
+
+- **i18n — duplicate key cleanup:** Removed stale string form of `"mockActions": "פעולות"` / `"Mock Actions"` from `managedSavings.expandedView` in both translation files. Only object form remains.
+
+- **Pluralization fix:** `table.investmentsCount` updated to ICU plural format:
+  - Hebrew: `"{count, plural, one {קרן אחת} other {{count} קרנות}}"` — grammatically correct singular and plural
+  - English: `"{count, plural, one {# fund} other {# funds}}"` — correct "1 fund" vs "N funds"
+  - Component updated from `t.rich()` to `t()` for ICU string support
+
+- **Loading states:** Add and Edit modals now show pending/loading text during server action:
+  - Add modal: "מוסיף..." / "Adding..." (from `modal.adding`)
+  - Edit modal: "שומר..." / "Saving..." (from `modal.saving`)
+  - Buttons remain disabled during pending
+
+- **Distinct section heading:** Page `h2` above holdings table now uses `holdingsTitle` ("ההשקעות שלי" / "Your Holdings") instead of repeating `pageTitle`. Fixes h1/h2 duplication.
+
+- **Validation hardening:** Zod schemas for Create/Update now enforce:
+  - `currentBalance: max(50_000_000)` ILS
+  - `monthlyContribution: max(500_000)` ILS
+  - Prevents implausibly large inputs from reaching DB
+
+- **Code cleanup:**
+  - Removed dead `onInvestmentChange?` prop from `ManagedSavingsTable`
+  - Removed unreachable `archived → inactive` status mapping from serializer (archived records are filtered before serialization)
+
+Files Changed:
+- Code: `DeleteHoldingConfirmModal.tsx`, `ManagedSavingsTable.tsx`, `AddManagedFundModal.tsx`, `EditManagedFundModal.tsx`, `ManagedSavingsPageClient.tsx`, `serializers.ts`, `managed-savings.ts` (validation)
+- Translations: `he.json`, `en.json`
+- Documentation: `Context/current-feature.md` (scope, status, phase breakdown)
+
+Product QA Approval:
+Product Owner confirmed all scenarios work correctly:
+- Hebrew `/managed-savings`: load, add, edit, delete, persistence, notes, projections, pluralization — all passed
+- English `/en/managed-savings`: load, LTR layout, sidebar, CRUD, pluralization — all passed
+- Dashboard `/`: no regressions — passed
+
+Automated Checks:
+- `npm run lint` — passed (0 errors, 0 warnings)
+- `npx tsc --noEmit` — passed (no type errors)
+- `npm run build` — passed (24 routes generated)
+- `npm run db:validate` — passed (schema valid)
+
+Known Deferred Items:
+- SSR `<html lang/dir>` for English routes remains statically Hebrew/RTL in initial render; `SetHtmlAttributes` corrects after hydration — no visible flash
+- Auth.js and production multi-user isolation are future scope; dev-user stub remains
+- Public fund performance remains mock/fallback until Phase 2C connects Data.gov.il
+- Custom horizon for years 2–4, 6–9, 11–14 returns 0 (edge case in Phase 2A projection model; normal usage defaults to 20 years)
+
+Branch History:
+- Feature branch: `fix/managed-savings-hardening`
+- Merged into: `master`
+- Commit: `feat: harden managed savings persistence UX`

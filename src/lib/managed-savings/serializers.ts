@@ -58,11 +58,9 @@ export function serializeHolding(
     depositFeePercent: bpsToPercent(record.depositFeeBps),
     owner: record.owner as ManagedSavingsInvestment["owner"],
     lastUpdateDate: dateSource.toISOString().split("T")[0],
-    // Only active and inactive holdings are loaded (not archived); map DB status to UI status.
-    status:
-      record.status === "archived"
-        ? "inactive"
-        : (record.status as "active" | "inactive"),
+    // The data access layer filters out archived holdings before serialization,
+    // so only "active" and "inactive" records arrive here.
+    status: record.status as "active" | "inactive",
     officialFundId: record.officialFundId ?? undefined,
     trackPerformance: FALLBACK_PERFORMANCE[type] ?? FALLBACK_PERFORMANCE.gemel,
     notes: record.notes ?? undefined,

@@ -1,17 +1,19 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronDown, TrendingUp, Edit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatPercent } from "@/lib/locale/formatters";
 import { ExpandedManagedSavingsRow } from "./ExpandedManagedSavingsRow";
-import type { ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
+import {
+  projectSimulations,
+  type ManagedSavingsInvestment,
+} from "@/lib/mock/managed-savings-data";
 
 interface ManagedSavingsTableProps {
   investments: ManagedSavingsInvestment[];
   customYears: number;
-  onInvestmentChange?: (investment: ManagedSavingsInvestment) => void;
   onEditClick?: (investment: ManagedSavingsInvestment) => void;
 }
 
@@ -34,6 +36,23 @@ export function ManagedSavingsTable({
   const tOwner = useTranslations("managedSavings.ownerLabels");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  // Pre-compute projections for every investment row using the same model as summary cards.
+  // projectSimulations handles balance + monthly contributions + accumulation fee.
+  const projections = useMemo(() => {
+    const map: Record<string, Record<number, number>> = {};
+    investments.forEach((inv) => {
+      const sims = projectSimulations(inv, customYears);
+      map[inv.id] = {
+        1: sims[1]?.projectedValue ?? 0,
+        5: sims[5]?.projectedValue ?? 0,
+        10: sims[10]?.projectedValue ?? 0,
+        15: sims[15]?.projectedValue ?? 0,
+        [customYears]: sims[customYears]?.projectedValue ?? 0,
+      };
+    });
+    return map;
+  }, [investments, customYears]);
+
   const typeLabels: Record<string, string> = {
     hishtalmut: t("tableColumns.typeHishtalmut"),
     gemel: t("tableColumns.typeGemel"),
@@ -55,7 +74,7 @@ export function ManagedSavingsTable({
             {t("pageTitle")}
           </h3>
           <span className="text-sm font-medium text-muted-foreground">
-            {t.rich("table.investmentsCount", { count: investments.length })}
+            {t("table.investmentsCount", { count: investments.length })}
           </span>
         </div>
         <p className="text-sm text-muted-foreground">{t("pageSubtitle")}</p>
@@ -67,7 +86,7 @@ export function ManagedSavingsTable({
           <thead>
             <tr className="bg-secondary/40 border-b-2 border-border/80">
               <th className="h-12 px-4 py-3 text-start font-semibold text-muted-foreground w-10 border-e border-border/30">
-                <span className="sr-only">Expand</span>
+                <span className="sr-only">{t("table.expandSr")}</span>
               </th>
               <th className="h-12 px-4 py-3 text-start font-bold text-foreground border-e border-border/30">
                 {t("tableColumns.name")}
@@ -109,7 +128,7 @@ export function ManagedSavingsTable({
                 {t.rich("tableColumns.inCustomYears", { years: customYears })}
               </th>
               <th className="h-12 px-4 py-3 text-center font-semibold text-muted-foreground w-12">
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">{t("table.actionsSr")}</span>
               </th>
             </tr>
           </thead>
@@ -191,32 +210,26 @@ export function ManagedSavingsTable({
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
                     <span className="font-mono text-sm font-semibold text-goal">
-                      {formatCurrency(investment.currentBalance * 1.08)}
+                      {formatCurrency(projections[investment.id]?.[1] ?? 0)}
                     </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
                     <span className="font-mono text-sm font-semibold text-goal">
-                      {formatCurrency(investment.currentBalance * 1.35)}
+                      {formatCurrency(projections[investment.id]?.[5] ?? 0)}
                     </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
                     <span className="font-mono text-sm font-semibold text-goal">
-                      {formatCurrency(investment.currentBalance * 1.85)}
+                      {formatCurrency(projections[investment.id]?.[10] ?? 0)}
                     </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
                     <span className="font-mono text-sm font-semibold text-goal">
-                      {formatCurrency(investment.currentBalance * 2.4)}
+                      {formatCurrency(projections[investment.id]?.[15] ?? 0)}
                     </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end font-mono font-bold text-networth ps-6 border-s-2 border-networth/40">
-                    {formatCurrency(
-                      investment.currentBalance *
-                        Math.pow(
-                          1.06 - investment.accumulationFeePercent / 100,
-                          customYears
-                        )
-                    )}
+                    {formatCurrency(projections[investment.id]?.[customYears] ?? 0)}
                   </td>
                   <td className="h-14 px-4 py-3 text-center">
                     <button
@@ -225,7 +238,7 @@ export function ManagedSavingsTable({
                         onEditClick?.(investment);
                       }}
                       className="inline-flex items-center justify-center p-2 rounded-lg text-muted-foreground hover:bg-secondary/40 hover:text-foreground transition-colors"
-                      title="Edit"
+                      title={t("table.editTitle")}
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>

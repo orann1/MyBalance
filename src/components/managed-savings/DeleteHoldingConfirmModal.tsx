@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Trash2, X } from "lucide-react";
 import { archiveManagedSavingsHolding } from "@/lib/actions/managed-savings-actions";
@@ -21,12 +21,16 @@ export function DeleteHoldingConfirmModal({
 }: DeleteHoldingConfirmModalProps) {
   const t = useTranslations("managedSavings");
   const [isPending, startTransition] = useTransition();
+  const [hasError, setHasError] = useState(false);
 
   const handleConfirm = () => {
+    setHasError(false);
     startTransition(async () => {
       const result = await archiveManagedSavingsHolding({ id: investment.id });
       if (result.ok) {
         onSuccess(investment.id);
+      } else {
+        setHasError(true);
       }
     });
   };
@@ -56,10 +60,15 @@ export function DeleteHoldingConfirmModal({
         </div>
 
         {/* Body */}
-        <div className="px-6 py-5">
+        <div className="px-6 py-5 space-y-3">
           <p className="text-sm text-muted-foreground">
             {t("deleteModal.body", { name: investment.name })}
           </p>
+          {hasError && (
+            <div className="rounded-lg bg-red-50 border border-red-200/60 p-3">
+              <p className="text-xs text-red-800">{t("errors.archiveFailed")}</p>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
