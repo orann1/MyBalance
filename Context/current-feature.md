@@ -2,7 +2,7 @@
 
 ## Feature Name
 
-Phase 2B-3 — Managed Savings Hardening & QA Audit
+Phase 2C-1 — Public Fund Schema and Resource Configuration
 
 ### Phase Breakdown
 
@@ -11,8 +11,10 @@ Phase 2B-3 — Managed Savings Hardening & QA Audit
 - **Phase 2A: Managed Savings Mock Experience** — COMPLETED & APPROVED
 - **Phase 2B-1: Managed Savings Persistence Infrastructure** — COMPLETED (2026-06-29)
 - **Phase 2B-2: Managed Savings DB-backed Actions and UI** — COMPLETED (2026-06-29)
-- **Phase 2B-3: Managed Savings Hardening & QA Audit** — IN PROGRESS (2026-06-29)
-- **Phase 2C and beyond** — Not started
+- **Phase 2B-3: Managed Savings Hardening & QA Audit** — COMPLETED AND VERIFIED (2026-06-29)
+- **Phase 2C-1: Public Fund Schema and Resource Configuration** — COMPLETED AND VERIFIED (2026-06-30)
+- **Phase 2C-2: Public Fund Live Sync** — Not started
+- **Phase 2C-3: Public Fund Matching/Linking** — Not started
 
 ## Status
 
@@ -23,16 +25,21 @@ Phase 2B: **COMPLETED AND VERIFIED** (2026-06-29)
   - 2B-1: Persistence Infrastructure — COMPLETED (2026-06-29)
   - 2B-2: DB-backed Actions and UI — COMPLETED AND VERIFIED (2026-06-29)
   - 2B-3: Hardening & QA Audit — COMPLETED AND VERIFIED (2026-06-29)
-Phase 2C and beyond: Not started
-Phase 2B-1: **COMPLETED** (2026-06-29)
-Phase 2B-2: **COMPLETED AND VERIFIED** (2026-06-29)
-Phase 2B-3: **COMPLETED AND VERIFIED** (2026-06-29)
+Phase 2C-1: Public Fund Schema and Resource Configuration — **COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report; schema, migration, seed/config, documentation, and automated checks accepted.
+Phase 2C-2 (live Data.gov.il sync): **Not started.**
+Phase 2C-3 (matching/linking to ManagedSavingsHolding): **Not started.**
 
 ## Known Limitations / Deferred Items
 
 - **`<html lang/dir>` SSR for English routes:** For `/en/*` routes, the initial server-rendered HTML has `lang="he" dir="rtl"` on the `<html>` element (from the minimal root layout). `SetHtmlAttributes` corrects this after client hydration. No visible layout flash — `AppShell` renders with `dir="ltr"` in SSR HTML. Should be addressed in a dedicated i18n hardening task before production.
 - **Dev-user stub:** All DB operations use `dev@mybalance.local`. Auth.js and production multi-user isolation are future scope.
-- **Public track performance:** Remains mock/fallback data until Phase 2C.
+- **Public track performance:** Remains mock/fallback data until Phase 2C-2/2C-3 connect Data.gov.il.
+- **Phase 2C-2 live Data.gov.il sync:** Not implemented. `PublicFund`/`FundReturn`/`PublicDataSyncRun` schema exists (Phase 2C-1) but no API client, normalization, or sync logic has been written.
+- **Public fund matching UI:** Not implemented. Planned for Phase 2C-3.
+- **ManagedSavingsHolding relation to PublicFund:** Not added yet. `officialFundId` remains a plain optional string. Linking is planned for Phase 2C-3.
+- **Product type inference for PublicFund:** Unresolved. GemelNet does not expose a clean product type column; `productType` must remain nullable / allow `unknown` until a future phase defines safe inference rules.
+- **AUM units:** Not display-approved yet. `FundReturn.assetsUnderManagement` must not be displayed in UI until units are confirmed.
+- **Custom horizon projection edge case:** Custom horizon for years 2–4, 6–9, 11–14 returns 0 in the Phase 2A projection model (normal usage defaults to 20 years). Remains deferred.
 
 ## Context
 
@@ -595,3 +602,50 @@ Translations:
 - `npm run build` — must pass
 - `npm run db:validate` — must pass
 - Browser QA on both Hebrew and English managed savings routes
+
+---
+
+## Phase 2C-1: Public Fund Schema and Resource Configuration
+
+### Status
+
+**COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved. Merged into `master`.
+
+### Goal
+
+Add the database schema and seed/config records needed for future public GemelNet/PensionNet fund sync. Schema/config foundation only.
+
+### Scope
+
+- Prisma models: `PublicFund`, `FundReturn`, `PublicDataResource`, `PublicDataSyncRun`.
+- Enums: `PublicDataSource`, `PublicDataSyncStatus`, `PublicDataSyncTrigger`, `PublicFundProductType`.
+- Seed: `PublicDataResource` config rows for the six confirmed Data.gov.il resource IDs (3 GemelNet periods + 3 PensionNet periods), idempotent upsert, no Data.gov.il calls made.
+- Migration: `prisma/migrations/20260630125534_add_public_fund_schema/`.
+
+### Non-Scope (deferred to later sub-phases)
+
+- Data.gov.il API client / `datastore_search` calls (Phase 2C-2).
+- Normalization logic, sync server actions, admin sync UI, scheduled sync (Phase 2C-2).
+- Matching/linking UI and FK from `ManagedSavingsHolding` to `PublicFund` (Phase 2C-3).
+- Replacing mock/fallback public track performance on the Managed Savings page (Phase 2C-2/2C-3).
+- Any UI changes.
+
+### Acceptance Criteria
+
+- Prisma schema includes `PublicFund`, `FundReturn`, `PublicDataResource`, `PublicDataSyncRun` with correct enums, relationships, unique constraints, and indexes.
+- Prisma migration created and applied locally.
+- `prisma generate` and `prisma validate` pass.
+- Existing `ManagedSavingsHolding` model and behavior unchanged; no FK added yet.
+- Seed remains idempotent and includes `PublicDataResource` rows.
+- No Data.gov.il calls made.
+- No UI changes.
+
+### QA Requirements
+
+- `npm run db:validate` — must pass
+- `npm run db:generate` — must pass
+- `npm run db:migrate:local` — must pass (local DB available)
+- `npm run db:seed:local` — must pass (local DB available)
+- `npm run lint` — must pass
+- `npx tsc --noEmit` — must pass
+- `npm run build` — must pass

@@ -34,6 +34,36 @@ enum HoldingStatus {
   archived
 }
 
+// Phase 2C-1: public fund data source (Data.gov.il datasets).
+enum PublicDataSource {
+  gemelnet
+  pensionnet
+}
+
+// Phase 2C-1: lifecycle status of a sync run. Sync execution itself is Phase 2C-2.
+enum PublicDataSyncStatus {
+  running
+  success
+  failed
+}
+
+// Phase 2C-1: who/what triggered a sync run.
+enum PublicDataSyncTrigger {
+  manual
+  scheduled
+}
+
+// Phase 2C-1: best-effort product type classification for a PublicFund.
+// GemelNet/PensionNet do not expose a clean product type column, so this
+// must remain nullable / allow `unknown` rather than being inferred confidently.
+enum PublicFundProductType {
+  hishtalmut
+  gemel
+  hashkaa
+  pension
+  unknown
+}
+
 // ─── Models ───────────────────────────────────────────────────────────────────
 
 // Phase 2B: single-user dev stub. Auth.js integration is planned for a future phase.
@@ -88,4 +118,135 @@ model ManagedSavingsHolding {
   @@index([userId, status])
   @@index([type])
   @@index([officialFundId])
+}
+
+// ─── Phase 2C-1: Public Fund Data Foundation ──────────────────────────────────
+// Schema/config only. No live Data.gov.il sync, matching, or UI in this phase.
+// ManagedSavingsHolding is intentionally NOT linked to PublicFund yet (Phase 2C-3).
+
+// Represents a public GemelNet/PensionNet fund (fund-level, not personal data).
+model PublicFund {
+  id     String           @id @default(cuid())
+  source PublicDataSource
+
+  fundId   String
+  fundName String
+
+  managingCompany        String
+  managingCompanyLegalId String?
+  controllingCorporation String?
+  parentCompanyId        String?
+  parentCompanyName      String?
+
+  // Nullable: GemelNet does not expose a clean product type column.
+  productType PublicFundProductType?
+
+  fundClassification String?
+  specialization     String?
+  subSpecialization  String?
+  targetPopulation   String?
+
+  inceptionDate DateTime?
+
+  firstSeenAt DateTime @default(now())
+  lastSeenAt  DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  fundReturns FundReturn[]
+
+  @@unique([source, fundId])
+  @@index([source])
+  @@index([fundId])
+  @@index([fundName])
+  @@index([managingCompany])
+}
+
+// Monthly public return data for a PublicFund. Fund-level only — never the
+// user's personal realized return.
+model FundReturn {
+  id           String     @id @default(cuid())
+  publicFundId String
+  publicFund   PublicFund @relation(fields: [publicFundId], references: [id])
+
+  reportPeriod DateTime
+
+  monthlyReturn Decimal @db.Decimal(10, 4)
+  ytdReturn     Decimal @db.Decimal(10, 4)
+
+  trailing3YrReturn   Decimal? @db.Decimal(10, 4)
+  trailing5YrReturn   Decimal? @db.Decimal(10, 4)
+  annualized3YrReturn Decimal? @db.Decimal(10, 4)
+  annualized5YrReturn Decimal? @db.Decimal(10, 4)
+
+  // AUM units are not display-approved yet — do not infer/display units in UI.
+  assetsUnderManagement    Decimal? @db.Decimal(18, 2)
+  assetsUnderManagementRaw String?
+
+  avgAnnualManagementFee Decimal? @db.Decimal(10, 4)
+  avgDepositFee          Decimal? @db.Decimal(10, 4)
+
+  sourceResourceId   String
+  sourceSnapshotDate DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([publicFundId, reportPeriod])
+  @@index([publicFundId])
+  @@index([reportPeriod])
+}
+
+// Config record for a known Data.gov.il resource (dataset period), so resource
+// IDs are stored in config and not hardcoded in future sync logic.
+model PublicDataResource {
+  id     String           @id @default(cuid())
+  source PublicDataSource
+
+  label      String
+  resourceId String
+
+  periodStart DateTime?
+  periodEnd   DateTime?
+
+  isCurrent Boolean @default(false)
+  isActive  Boolean @default(true)
+
+  lastSyncedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([source, resourceId])
+}
+
+// Audit/history record for a public data sync run. No sync logic in this
+// phase — used later by the Admin sync UI (Phase 2C-2+).
+model PublicDataSyncRun {
+  id     String           @id @default(cuid())
+  source PublicDataSource
+
+  resourceId String
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  status PublicDataSyncStatus @default(running)
+
+  insertedCount Int @default(0)
+  updatedCount  Int @default(0)
+  skippedCount  Int @default(0)
+  errorCount    Int @default(0)
+
+  errorMessage String?
+
+  triggeredBy PublicDataSyncTrigger
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([source])
+  @@index([status])
+  @@index([startedAt])
 }

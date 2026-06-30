@@ -44,6 +44,26 @@ Data is usually split by period, for example:
 
 The app should store resource IDs in config, not hardcode them throughout the codebase.
 
+### Confirmed Resource IDs (Phase 2C Discovery Audit, seeded in Phase 2C-1)
+
+Verified and stored as `PublicDataResource` config rows. No live sync uses these yet.
+
+GemelNet:
+- 1999–2022: `91c849ed-ddc4-472b-bd09-0f5486cea35c`
+- 2023: `2016d770-f094-4a2e-983e-797c26479720`
+- 2024–today: `a30dcbea-a1d2-482c-ae29-8f781f5025fb` (current)
+
+PensionNet:
+- 1999–2022: `a66926f3-e396-4984-a4db-75486751c2f7`
+- 2023: `4694d5a7-5284-4f3d-a2cb-5887f43fb55e`
+- 2024–today: `6d47d6b5-cb08-488b-b333-f1e717b1e1bd` (current)
+
+### API Method Notes
+
+- `datastore_search_sql` is blocked/unreliable on Data.gov.il and should not be used.
+- `datastore_search` is the approved API method for fetching records.
+- No API key is currently required.
+
 ## Sync Strategy
 
 Do not call Data.gov.il directly from every page view.

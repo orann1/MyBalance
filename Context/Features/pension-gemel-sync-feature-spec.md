@@ -14,6 +14,20 @@ Sync public Israeli pension/gemel/hishtalmut fund return data from Data.gov.il.
 This sync provides fund-level public returns only.
 It does not provide personal balances.
 
+This feature is public fund-level only — `PublicFund`/`FundReturn` records are never combined with or linked to a user's `ManagedSavingsHolding` balance unless a future matching phase explicitly does so with user confirmation.
+
+## Phase 2C-1 Status (2026-06-30)
+
+Phase 2C-1 implemented schema and config only:
+- `PublicFund`, `FundReturn`, `PublicDataResource`, `PublicDataSyncRun` Prisma models and related enums.
+- `PublicDataResource` seeded with the six confirmed GemelNet/PensionNet resource IDs.
+
+Not implemented in Phase 2C-1: Data.gov.il API client, `datastore_search` calls, normalization logic, sync server actions, admin sync UI, scheduled sync, matching UI, or any link from `ManagedSavingsHolding` to `PublicFund`.
+
+### Product Type Inference Risk
+
+GemelNet does not expose a clean product type column. `PublicFund.productType` (enum `PublicFundProductType`: `hishtalmut`, `gemel`, `hashkaa`, `pension`, `unknown`) is nullable and must allow `unknown` rather than being confidently inferred during a future sync. Any inference logic implemented in Phase 2C-2+ should be treated as best-effort and reviewed before being relied on for matching.
+
 ## Planned Capabilities
 
 - Store data source resource IDs

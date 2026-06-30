@@ -441,3 +441,48 @@ Branch History:
 - Feature branch: `fix/managed-savings-hardening`
 - Merged into: `master`
 - Commit: `feat: harden managed savings persistence UX`
+
+## Phase 2C-1 — Public Fund Schema and Resource Configuration
+
+Status: **Completed and Verified** (2026-06-30)
+
+This phase added the database schema and seed/config foundation needed for future public GemelNet/PensionNet fund sync. Schema/config only — no live Data.gov.il sync, matching UI, admin sync UI, or replacement of mock/fallback public performance.
+
+Completed:
+- **`PublicFund` model:** Represents a public GemelNet/PensionNet fund (fund-level, not personal data). Fields: `source`, `fundId`, `fundName`, `managingCompany`, `managingCompanyLegalId?`, `controllingCorporation?`, `parentCompanyId?`, `parentCompanyName?`, `productType?` (nullable — GemelNet has no clean product type column), `fundClassification?`, `specialization?`, `subSpecialization?`, `targetPopulation?`, `inceptionDate?`, `firstSeenAt`, `lastSeenAt`, `createdAt`, `updatedAt`. `@@unique([source, fundId])`. Indexes on `source`, `fundId`, `fundName`, `managingCompany`.
+- **`FundReturn` model:** Monthly public return data for a `PublicFund`. Fields: `publicFundId` (FK), `reportPeriod`, `monthlyReturn`, `ytdReturn`, `trailing3YrReturn?`, `trailing5YrReturn?`, `annualized3YrReturn?`, `annualized5YrReturn?`, `assetsUnderManagement?`, `assetsUnderManagementRaw?`, `avgAnnualManagementFee?`, `avgDepositFee?`, `sourceResourceId`, `sourceSnapshotDate?`, `createdAt`, `updatedAt`. `@@unique([publicFundId, reportPeriod])`. Decimal types used for return/fee percentages and AUM — never floats.
+- **`PublicDataResource` model:** Config record for a known Data.gov.il resource (dataset period), so resource IDs are stored in config rather than hardcoded in future sync logic. Fields: `source`, `label`, `resourceId`, `periodStart?`, `periodEnd?`, `isCurrent`, `isActive`, `lastSyncedAt?`, `createdAt`, `updatedAt`. `@@unique([source, resourceId])`.
+- **`PublicDataSyncRun` model:** Audit/history record for a sync run, to be used later by the Admin sync UI (Phase 2C-2+). Fields: `source`, `resourceId`, `startedAt`, `finishedAt?`, `status`, `insertedCount`, `updatedCount`, `skippedCount`, `errorCount`, `errorMessage?`, `triggeredBy`, `createdAt`, `updatedAt`. No rows written in this phase — no sync logic exists yet.
+- **New enums:** `PublicDataSource` (`gemelnet`, `pensionnet`), `PublicDataSyncStatus` (`running`, `success`, `failed`), `PublicDataSyncTrigger` (`manual`, `scheduled`), `PublicFundProductType` (`hishtalmut`, `gemel`, `hashkaa`, `pension`, `unknown`).
+- **Seeded resource config:** `prisma/seed.ts` upserts 6 `PublicDataResource` rows from the Phase 2C Discovery Audit Report — 3 GemelNet periods (1999–2022, 2023, 2024–today) and 3 PensionNet periods (1999–2022, 2023, 2024–today). The `2024–today` resource is marked `isCurrent=true` for each source; all six are `isActive=true`. Seeding is idempotent (upsert) and makes no Data.gov.il calls.
+- **Migration:** `prisma/migrations/20260630125534_add_public_fund_schema/` — created and applied to the local PostgreSQL database.
+
+Out of Scope (Not Implemented in Phase 2C-1):
+- Live Data.gov.il calls — no API client, no `datastore_search` requests.
+- `ManagedSavingsHolding` relation to `PublicFund` — `officialFundId` remains a plain optional string; linking is deferred to Phase 2C-3.
+- Any UI changes — no matching UI, no admin sync UI, no public performance display changes.
+- Sync server actions, normalization logic, scheduled sync (Phase 2C-2).
+
+Automated Checks:
+- `npm run db:validate` — passed
+- `npm run db:generate` — passed
+- `npm run db:migrate:local` — passed (migration applied to local Docker PostgreSQL, port 5433)
+- `npm run db:seed:local` — passed (run twice to confirm idempotency)
+- `npm run lint` — passed (0 errors, 0 warnings)
+- `npx tsc --noEmit` — passed (no type errors)
+- `npm run build` — passed (pre-existing unrelated `ENVIRONMENT_FALLBACK` warning only)
+
+Known Deferred Items:
+- Phase 2C-2 live Data.gov.il sync not implemented.
+- Matching UI not implemented.
+- `ManagedSavingsHolding` relation to `PublicFund` not added yet.
+- Product type inference unresolved (kept nullable/`unknown` by design).
+- AUM units not display-approved yet.
+- Admin sync UI not implemented.
+- Public performance display still uses fallback/mock data.
+- Custom horizon projection edge case remains deferred (pre-existing, unrelated to this phase).
+
+Branch History:
+- Feature branch: `feature/public-fund-schema`
+- Merged into: `master`
+- Commit: `feat: add public fund schema foundation`

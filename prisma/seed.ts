@@ -1,4 +1,4 @@
-import { PrismaClient, ManagedSavingsType, OwnerLabel, HoldingStatus } from "@prisma/client";
+import { PrismaClient, ManagedSavingsType, OwnerLabel, HoldingStatus, PublicDataSource } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { toMinorUnits, percentToBps } from "../src/lib/financial/units";
 
@@ -208,6 +208,75 @@ async function main() {
   }
 
   console.log(`Seed complete. ${holdings.length} holdings seeded for ${DEV_USER_EMAIL}.`);
+
+  console.log("Seeding public data resources (Phase 2C-1 config only — no Data.gov.il calls)...");
+
+  // Verified resource IDs from the Phase 2C Discovery Audit Report.
+  // Seeding only configures known resources; it does not fetch data.
+  const publicDataResources = [
+    {
+      source: PublicDataSource.gemelnet,
+      label: "GemelNet 1999-2022",
+      resourceId: "91c849ed-ddc4-472b-bd09-0f5486cea35c",
+      isCurrent: false,
+      isActive: true,
+    },
+    {
+      source: PublicDataSource.gemelnet,
+      label: "GemelNet 2023",
+      resourceId: "2016d770-f094-4a2e-983e-797c26479720",
+      isCurrent: false,
+      isActive: true,
+    },
+    {
+      source: PublicDataSource.gemelnet,
+      label: "GemelNet 2024-today",
+      resourceId: "a30dcbea-a1d2-482c-ae29-8f781f5025fb",
+      isCurrent: true,
+      isActive: true,
+    },
+    {
+      source: PublicDataSource.pensionnet,
+      label: "PensionNet 1999-2022",
+      resourceId: "a66926f3-e396-4984-a4db-75486751c2f7",
+      isCurrent: false,
+      isActive: true,
+    },
+    {
+      source: PublicDataSource.pensionnet,
+      label: "PensionNet 2023",
+      resourceId: "4694d5a7-5284-4f3d-a2cb-5887f43fb55e",
+      isCurrent: false,
+      isActive: true,
+    },
+    {
+      source: PublicDataSource.pensionnet,
+      label: "PensionNet 2024-today",
+      resourceId: "6d47d6b5-cb08-488b-b333-f1e717b1e1bd",
+      isCurrent: true,
+      isActive: true,
+    },
+  ];
+
+  for (const resource of publicDataResources) {
+    await prisma.publicDataResource.upsert({
+      where: {
+        source_resourceId: {
+          source: resource.source,
+          resourceId: resource.resourceId,
+        },
+      },
+      update: {
+        label: resource.label,
+        isCurrent: resource.isCurrent,
+        isActive: resource.isActive,
+      },
+      create: resource,
+    });
+    console.log(`  Upserted: ${resource.source} — ${resource.label}`);
+  }
+
+  console.log(`Public data resource seed complete. ${publicDataResources.length} resources configured.`);
 }
 
 main()

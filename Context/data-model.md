@@ -122,32 +122,96 @@ Planned fields:
 
 ### PublicFund
 
-Represents a public pension/gemel/hishtalmut track. **Phase 2C — not implemented in Phase 2B.**
+Represents a public GemelNet/PensionNet fund (fund-level, not personal data). **Implemented in Phase 2C-1 (schema/config only — no live sync, no UI, no `ManagedSavingsHolding` link).**
 
-Planned fields:
+Fields:
 - id
-- productType
+- source (`PublicDataSource` enum)
 - fundId
 - fundName
 - managingCompany
-- trackName
-- source
+- managingCompanyLegalId (optional)
+- controllingCorporation (optional)
+- parentCompanyId (optional)
+- parentCompanyName (optional)
+- productType (`PublicFundProductType` enum, optional — GemelNet does not expose a clean product type column, so this must stay nullable / allow `unknown`)
+- fundClassification (optional)
+- specialization (optional)
+- subSpecialization (optional)
+- targetPopulation (optional)
+- inceptionDate (optional)
+- firstSeenAt
+- lastSeenAt
 - createdAt
 - updatedAt
 
+Constraints: `@@unique([source, fundId])`. Indexes on `source`, `fundId`, `fundName`, `managingCompany`.
+
+`ManagedSavingsHolding` is NOT linked to `PublicFund` in Phase 2C-1. `officialFundId` on `ManagedSavingsHolding` remains unchanged. Matching/linking is planned for Phase 2C-3.
+
 ### FundReturn
 
-Monthly public return data for a fund/track. **Phase 2C — not implemented in Phase 2B.**
+Monthly public return data for a `PublicFund`. **Implemented in Phase 2C-1 (schema/config only).**
 
-Planned fields:
+Fields:
 - id
-- fundId
+- publicFundId (FK to `PublicFund`)
 - reportPeriod
-- monthlyReturn
-- ytdReturn
-- assetsUnderManagement
+- monthlyReturn (Decimal)
+- ytdReturn (Decimal)
+- trailing3YrReturn (optional, Decimal)
+- trailing5YrReturn (optional, Decimal)
+- annualized3YrReturn (optional, Decimal)
+- annualized5YrReturn (optional, Decimal)
+- assetsUnderManagement (optional, Decimal)
+- assetsUnderManagementRaw (optional, String — AUM units are not display-approved yet; do not infer/display units in UI)
+- avgAnnualManagementFee (optional, Decimal)
+- avgDepositFee (optional, Decimal)
 - sourceResourceId
-- sourceUpdatedAt
+- sourceSnapshotDate (optional)
+- createdAt
+- updatedAt
+
+Constraints: `@@unique([publicFundId, reportPeriod])`. Indexes on `publicFundId`, `reportPeriod`.
+
+### PublicDataResource
+
+Config record for a known Data.gov.il resource (dataset period). **Implemented in Phase 2C-1.** Exists so resource IDs are stored in config and not hardcoded in future sync logic.
+
+Fields:
+- id
+- source (`PublicDataSource` enum)
+- label
+- resourceId
+- periodStart (optional)
+- periodEnd (optional)
+- isCurrent
+- isActive
+- lastSyncedAt (optional)
+- createdAt
+- updatedAt
+
+Constraints: `@@unique([source, resourceId])`.
+
+Seeded in Phase 2C-1 with the six verified GemelNet/PensionNet resource IDs (see `Context/api-data-sources.md`). Seeding is idempotent (upsert) and does not call Data.gov.il.
+
+### PublicDataSyncRun
+
+Audit/history record for a public data sync run. **Implemented in Phase 2C-1 (schema only — no sync logic).** Used later by the Admin sync UI (Phase 2C-2+).
+
+Fields:
+- id
+- source (`PublicDataSource` enum)
+- resourceId
+- startedAt
+- finishedAt (optional)
+- status (`PublicDataSyncStatus` enum)
+- insertedCount (default 0)
+- updatedCount (default 0)
+- skippedCount (default 0)
+- errorCount (default 0)
+- errorMessage (optional)
+- triggeredBy (`PublicDataSyncTrigger` enum)
 - createdAt
 - updatedAt
 
@@ -184,6 +248,38 @@ Planned fields:
 - updatedAt
 
 ## Enums
+
+### PublicDataSource
+
+Public fund data source for `PublicFund`, `PublicDataResource`, `PublicDataSyncRun`:
+
+- `gemelnet`
+- `pensionnet`
+
+### PublicDataSyncStatus
+
+Lifecycle status for a `PublicDataSyncRun`:
+
+- `running`
+- `success`
+- `failed`
+
+### PublicDataSyncTrigger
+
+Trigger source for a `PublicDataSyncRun`:
+
+- `manual`
+- `scheduled`
+
+### PublicFundProductType
+
+Best-effort product type classification for a `PublicFund`. Optional/nullable — GemelNet/PensionNet do not expose a clean product type column, so inference is not confident:
+
+- `hishtalmut`
+- `gemel`
+- `hashkaa`
+- `pension`
+- `unknown`
 
 ### ManagedSavingsType
 
@@ -275,11 +371,23 @@ npm run db:studio:local         # inspect data in Prisma Studio
 npm run db:migrate:deploy      # npx prisma migrate deploy
 ```
 
+## Phase 2C-1 Implementation Notes (2026-06-30)
+
+Schema/config only. No live Data.gov.il sync, matching UI, or replacement of mock performance data.
+
+Added: `PublicFund`, `FundReturn`, `PublicDataResource`, `PublicDataSyncRun` models. Added enums: `PublicDataSource`, `PublicDataSyncStatus`, `PublicDataSyncTrigger`, `PublicFundProductType`.
+
+Migration: `prisma/migrations/20260630125534_add_public_fund_schema/`.
+
+Seed: `prisma/seed.ts` now also upserts 6 `PublicDataResource` rows (3 GemelNet + 3 PensionNet periods) from the Phase 2C Discovery Audit Report. Seeding makes no Data.gov.il calls.
+
+`ManagedSavingsHolding` is unchanged — no FK to `PublicFund` added yet. `officialFundId` remains a plain optional string. Linking is planned for Phase 2C-3.
+
 ## Important Notes
 
 Do not assume public PensionNet/GemelNet data includes the user's personal balance.
 Public data usually provides fund-level returns and metadata only.
 
-PublicFund and FundReturn (formerly named Fund and FundReturn) are planned for Phase 2C when Data.gov.il / GemelNet sync is implemented. They are not part of Phase 2B.
+`PublicFund` and `FundReturn` schema is implemented as of Phase 2C-1. Live Data.gov.il sync (Phase 2C-2) and matching/linking to `ManagedSavingsHolding` (Phase 2C-3) are not yet implemented.
 
-In Phase 2B, ManagedSavingsHolding is the only new model. Public track performance remains mock/fallback data until Phase 2C.
+Public track performance on the Managed Savings page remains mock/fallback data until Phase 2C-2/2C-3 replace it.
