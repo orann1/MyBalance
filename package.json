@@ -16,7 +16,8 @@
     "db:seed:local": "prisma db seed",
     "db:studio:local": "prisma studio",
     "db:migrate:deploy": "prisma migrate deploy",
-    "sync:public-funds:local": "tsx scripts/sync-public-funds.ts"
+    "sync:public-funds:local": "tsx scripts/sync-public-funds.ts",
+    "search:public-funds:local": "tsx scripts/search-public-funds.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

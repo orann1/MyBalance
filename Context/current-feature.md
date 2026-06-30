@@ -2,7 +2,7 @@
 
 ## Feature Name
 
-Phase 2C-2 — Manual Public Fund Live Sync + Normalization
+Phase 2C-3A — Public Fund Matching Search Backend (COMPLETED AND VERIFIED)
 
 ### Phase Breakdown
 
@@ -14,7 +14,8 @@ Phase 2C-2 — Manual Public Fund Live Sync + Normalization
 - **Phase 2B-3: Managed Savings Hardening & QA Audit** — COMPLETED AND VERIFIED (2026-06-29)
 - **Phase 2C-1: Public Fund Schema and Resource Configuration** — COMPLETED AND VERIFIED (2026-06-30)
 - **Phase 2C-2: Public Fund Live Sync** — COMPLETED AND VERIFIED (2026-06-30)
-- **Phase 2C-3: Public Fund Matching/Linking** — Not started
+- **Phase 2C-3A: Public Fund Matching Search Backend** — COMPLETED AND VERIFIED (2026-06-30)
+- **Phase 2C-3B: Public Fund Matching/Linking (UI, link/unlink, FK)** — Not started
 - **Phase 2C-4: Public Performance Display Replacement** — Not started
 
 ## Status
@@ -28,7 +29,8 @@ Phase 2B: **COMPLETED AND VERIFIED** (2026-06-29)
   - 2B-3: Hardening & QA Audit — COMPLETED AND VERIFIED (2026-06-29)
 Phase 2C-1: Public Fund Schema and Resource Configuration — **COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report; schema, migration, seed/config, documentation, and automated checks accepted.
 Phase 2C-2: Manual Public Fund Live Sync + Normalization — **COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report; Data.gov.il `datastore_search` client, GemelNet/PensionNet normalization, sync service, manual CLI trigger (`npm run sync:public-funds:local`), live local sync verification, documentation, and automated checks accepted. Merged into `master`.
-Phase 2C-3 (matching/linking to ManagedSavingsHolding): **Not started.**
+Phase 2C-3A: Public Fund Matching Search Backend — **COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report; backend/data-layer search and candidate ranking over local `PublicFund`/`FundReturn` records, Hebrew-aware matching normalization, deterministic candidate scoring, Zod-validated server action, optional CLI smoke test, documentation updates, and automated checks accepted. Merged into `master` from `feature/public-fund-matching-search`. No linking UI, no FK from `ManagedSavingsHolding` to `PublicFund`, no replacement of mock/fallback public performance display.
+Phase 2C-3B (matching/linking UI, confirm link/unlink, FK to ManagedSavingsHolding): **Not started.**
 Phase 2C-4 (public performance display replacement): **Not started.**
 
 ## Known Limitations / Deferred Items
@@ -36,8 +38,8 @@ Phase 2C-4 (public performance display replacement): **Not started.**
 - **`<html lang/dir>` SSR for English routes:** For `/en/*` routes, the initial server-rendered HTML has `lang="he" dir="rtl"` on the `<html>` element (from the minimal root layout). `SetHtmlAttributes` corrects this after client hydration. No visible layout flash — `AppShell` renders with `dir="ltr"` in SSR HTML. Should be addressed in a dedicated i18n hardening task before production.
 - **Dev-user stub:** All DB operations use `dev@mybalance.local`. Auth.js and production multi-user isolation are future scope.
 - **Public track performance:** Remains mock/fallback data on the Managed Savings page. Phase 2C-2 syncs `PublicFund`/`FundReturn` data into the DB but does not change what the UI displays — replacement is planned for Phase 2C-3/2C-4.
-- **Public fund matching UI:** Not implemented. Planned for Phase 2C-3.
-- **ManagedSavingsHolding relation to PublicFund:** Not added yet. `officialFundId` remains a plain optional string. Linking is planned for Phase 2C-3.
+- **Public fund matching UI:** Not implemented. Phase 2C-3A added backend search/ranking only. UI is planned for Phase 2C-3B.
+- **ManagedSavingsHolding relation to PublicFund:** Not added yet. `officialFundId` remains a plain optional string. Linking is planned for Phase 2C-3B.
 - **Product type inference for PublicFund:** Unresolved. GemelNet does not expose a clean product type column; `productType` must remain nullable / allow `unknown` until a future phase defines safe inference rules.
 - **AUM units:** Not display-approved yet. `FundReturn.assetsUnderManagement` must not be displayed in UI until units are confirmed.
 - **`ACTUARIAL_ADJUSTMENT` (PensionNet):** Observed in live Data.gov.il records but has no corresponding schema column — not mapped or stored. No functional impact in this phase.
@@ -723,3 +725,77 @@ Live sync run against current GemelNet (`a30dcbea-a1d2-482c-ae29-8f781f5025fb`) 
 - `npx tsc --noEmit` — must pass
 - `npm run build` — must pass
 - Local DB: `npm run db:migrate:local`, `npm run db:seed:local`, `npm run sync:public-funds:local` — must pass
+
+---
+
+## Phase 2C-3A: Public Fund Matching Search Backend
+
+### Status
+
+**COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report. Merged into `master` from `feature/public-fund-matching-search`.
+
+### Goal
+
+Provide a safe, local-DB-only search and candidate ranking layer over synced `PublicFund`/`FundReturn` records, as the backend foundation for a future matching/linking UI (Phase 2C-3B). No link is added from `ManagedSavingsHolding` to `PublicFund` in this phase.
+
+### Scope
+
+- `src/lib/public-funds/search-types.ts` — `PublicFundSearchInput`, `PublicFundMatchCandidate`, and `MatchReasonLabel` types. Internal match reason identifiers only — no user-facing text.
+- `src/lib/public-funds/matching-normalization.ts` — local string normalization helpers (`normalizeForMatching`, `tokenizeForMatching`, `isNormalizedEqual`, `normalizedContains`, `trimAndCollapseWhitespace`) for Hebrew/English fund/company name matching. Comparison-only — never mutates stored values.
+- `src/lib/public-funds/matching.ts` — `scorePublicFundCandidate`, a pure deterministic scoring function (exact fundId, exact/contains fund name, token overlap, managing company, controlling corporation, parent company, source, product type, recent-return tie-breaker).
+- `src/lib/public-funds/search-public-funds.ts` — `searchPublicFundsForMatching`, the main search entry point. Local DB only via Prisma. Exact `fundId` lookup plus a bounded (`take: 200`) case-insensitive `contains` query across `fundName`/`managingCompany`/`controllingCorporation`/`parentCompanyName`, then in-memory scoring/ranking over the combined candidate pool. Enriches each candidate with the latest `FundReturn` (`reportPeriod desc`), excluding AUM fields.
+- `src/lib/validation/public-fund-matching.ts` — `PublicFundSearchSchema` (Zod) for the server action.
+- `src/lib/actions/public-fund-matching-actions.ts` — `searchPublicFundsForMatchingAction` server action. Validates with Zod, returns `{ ok: true, candidates }` or `{ ok: false, error: "validation" | "server_error" }`. No client/UI wiring in this phase.
+- `scripts/search-public-funds.ts` + `npm run search:public-funds:local` — optional CLI smoke test. Prints concise rows only (score, source, fundId, managingCompany, fundName, latestReportPeriod), no raw DB records.
+
+### Search behavior
+
+- Default result limit 10, max 20.
+- If both `query` and `fundId` are empty, returns `[]` immediately (no broad table scan).
+- Exact `fundId` match always included if present, scored highest (`exact_fund_id`), regardless of whether `query` is also supplied.
+- Text search runs only when `query` is non-empty; `source`/`managingCompany`/`productType` are optional narrowing filters. `productType` is not applied unless explicitly supplied, since most `PublicFund` rows have `productType = null`.
+- Candidate pool capped at 200 rows from the DB before in-memory scoring (`MAX_CANDIDATE_POOL`).
+- Ranking: `matchScore` desc, then `latestReportPeriod` desc, then `fundName` asc.
+
+### Non-Scope (deferred to Phase 2C-3B / 2C-4)
+
+- Matching/confirmation UI (no modal, no page changes).
+- Confirm link / unlink actions.
+- FK or relation from `ManagedSavingsHolding` to `PublicFund`.
+- Replacing the mock/fallback public performance display on the Managed Savings page.
+- Reliable `productType` inference.
+- AUM display.
+- Any Data.gov.il calls (this phase searches the local DB only).
+- Prisma schema changes (none made in this phase).
+
+### Acceptance Criteria
+
+- Public fund search function exists and is typed.
+- Search can find candidates by `fundId`.
+- Search can find candidates by Hebrew fund/company query.
+- Search supports `source` filtering.
+- Search returns ranked candidates with `matchScore` and `matchReasonLabels`.
+- Search enriches candidates with latest `FundReturn` metrics (AUM excluded).
+- Search does not call Data.gov.il.
+- Search does not modify `ManagedSavingsHolding`.
+- No schema migration added.
+- No UI changes.
+
+### QA Requirements
+
+- `npm run db:validate` — must pass
+- `npm run db:generate` — must pass
+- `npm run lint` — must pass
+- `npx tsc --noEmit` — must pass
+- `npm run build` — must pass
+- Manual verification (if local DB has Phase 2C-2 synced data): exact `fundId` search, Hebrew company query (e.g. "הראל", "מגדל"), `source=gemelnet`, `source=pensionnet`.
+
+### Local Search Verification (2026-06-30, re-verified at finalization)
+
+Run against local DB with Phase 2C-2 synced data (`PublicFund`=1,106, `FundReturn`=26,820):
+- Exact `fundId` search (`--fundId=101 --source=gemelnet`): 1 candidate returned, top score, correct fund.
+- Hebrew query search (`--query="הראל"`): 10 ranked candidates returned, all matching company/fund names.
+- `source=gemelnet` filter (`--query="מגדל" --source=gemelnet`): 10 gemelnet-only candidates, no pensionnet leakage.
+- `source=pensionnet` filter (`--query="כלל" --source=pensionnet --limit=5`): 5 pensionnet-only candidates, custom limit respected.
+- Empty/no-query edge case (no flags): 0 candidates returned, no broad DB scan triggered (confirms the empty-input short-circuit).
+- No Data.gov.il calls made during any verification run — confirmed by code inspection (`search-public-funds.ts` only calls `prisma.publicFund`/`prisma.fundReturn`).

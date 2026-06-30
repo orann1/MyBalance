@@ -388,6 +388,6 @@ Seed: `prisma/seed.ts` now also upserts 6 `PublicDataResource` rows (3 GemelNet 
 Do not assume public PensionNet/GemelNet data includes the user's personal balance.
 Public data usually provides fund-level returns and metadata only.
 
-`PublicFund` and `FundReturn` schema is implemented as of Phase 2C-1. Live Data.gov.il sync (Phase 2C-2, see `Context/sync-workflows.md`) is implemented and populates these tables for current GemelNet/PensionNet resources. Matching/linking to `ManagedSavingsHolding` (Phase 2C-3) is not yet implemented — no schema changes were needed for Phase 2C-2.
+`PublicFund` and `FundReturn` schema is implemented as of Phase 2C-1. Live Data.gov.il sync (Phase 2C-2, see `Context/sync-workflows.md`) is implemented and populates these tables for current GemelNet/PensionNet resources. Phase 2C-3A adds a local-DB-only search/ranking layer that reads `PublicFund`/`FundReturn` (no schema changes). Matching/linking to `ManagedSavingsHolding` (Phase 2C-3) is not yet implemented — no FK/relation exists yet, and no schema changes were needed for Phase 2C-2 or Phase 2C-3A.
 
 Public track performance on the Managed Savings page remains mock/fallback data until Phase 2C-2/2C-3 replace it.

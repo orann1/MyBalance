@@ -28,7 +28,17 @@ Not implemented in Phase 2C-1: Data.gov.il API client, `datastore_search` calls,
 
 **COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved; merged into `master`. Implemented: the Data.gov.il `datastore_search` client, GemelNet/PensionNet normalization (`normalizePublicFundRecord`), the sync service (`syncPublicFunds`/`syncPublicFundResource`), and a manual CLI trigger (`npm run sync:public-funds:local`). Verified locally against live current GemelNet and PensionNet resources — see `Context/current-feature.md` Phase 2C-2 for counts.
 
-Still not implemented: admin sync UI, scheduled sync, matching/linking UI, and any FK from `ManagedSavingsHolding` to `PublicFund` (Phase 2C-3). The public fund-level boundary is unchanged — synced `PublicFund`/`FundReturn` records are never combined with or linked to a user's `ManagedSavingsHolding` balance.
+Still not implemented: admin sync UI, scheduled sync, matching/linking UI, and any FK from `ManagedSavingsHolding` to `PublicFund` (Phase 2C-3B). The public fund-level boundary is unchanged — synced `PublicFund`/`FundReturn` records are never combined with or linked to a user's `ManagedSavingsHolding` balance.
+
+## Phase 2C-3A Status (2026-06-30)
+
+**COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved; merged into `master` from `feature/public-fund-matching-search`. Implemented the local-DB-only search/ranking backend that a future matching UI will call:
+
+- `searchPublicFundsForMatching` (`src/lib/public-funds/search-public-funds.ts`) — searches local `PublicFund` records by exact `fundId` and/or text query (fund name, managing company, controlling corporation, parent company name), with optional `source`/`managingCompany`/`productType` filters, scored and ranked via `scorePublicFundCandidate` (`src/lib/public-funds/matching.ts`) and Hebrew-aware normalization helpers (`src/lib/public-funds/matching-normalization.ts`).
+- `searchPublicFundsForMatchingAction` (`src/lib/actions/public-fund-matching-actions.ts`) — Zod-validated server action wrapping the search, not yet wired to any client/UI.
+- Optional CLI smoke test: `npm run search:public-funds:local -- --query="הראל" --source=gemelnet`.
+
+**No matching/confirmation UI, no confirm-link/unlink actions, and no FK from `ManagedSavingsHolding` to `PublicFund` are implemented in Phase 2C-3A.** User confirmation will still be required before any future link is created — this phase only returns ranked candidates for a future UI to present. Phase 2C-3B (matching/linking UI, confirm link/unlink, FK) has not started. See `Context/current-feature.md` Phase 2C-3A for full scope/acceptance criteria and local verification results.
 
 ### Product Type Inference Risk
 
