@@ -24,6 +24,12 @@ Phase 2C-1 implemented schema and config only:
 
 Not implemented in Phase 2C-1: Data.gov.il API client, `datastore_search` calls, normalization logic, sync server actions, admin sync UI, scheduled sync, matching UI, or any link from `ManagedSavingsHolding` to `PublicFund`.
 
+## Phase 2C-2 Status (2026-06-30)
+
+**COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved; merged into `master`. Implemented: the Data.gov.il `datastore_search` client, GemelNet/PensionNet normalization (`normalizePublicFundRecord`), the sync service (`syncPublicFunds`/`syncPublicFundResource`), and a manual CLI trigger (`npm run sync:public-funds:local`). Verified locally against live current GemelNet and PensionNet resources — see `Context/current-feature.md` Phase 2C-2 for counts.
+
+Still not implemented: admin sync UI, scheduled sync, matching/linking UI, and any FK from `ManagedSavingsHolding` to `PublicFund` (Phase 2C-3). The public fund-level boundary is unchanged — synced `PublicFund`/`FundReturn` records are never combined with or linked to a user's `ManagedSavingsHolding` balance.
+
 ### Product Type Inference Risk
 
 GemelNet does not expose a clean product type column. `PublicFund.productType` (enum `PublicFundProductType`: `hishtalmut`, `gemel`, `hashkaa`, `pension`, `unknown`) is nullable and must allow `unknown` rather than being confidently inferred during a future sync. Any inference logic implemented in Phase 2C-2+ should be treated as best-effort and reviewed before being relied on for matching.

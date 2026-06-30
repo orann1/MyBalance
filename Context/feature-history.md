@@ -486,3 +486,62 @@ Branch History:
 - Feature branch: `feature/public-fund-schema`
 - Merged into: `master`
 - Commit: `feat: add public fund schema foundation`
+
+## Phase 2C-2 — Manual Public Fund Live Sync + Normalization
+
+Status: **Completed and Verified** (2026-06-30)
+
+This phase implemented the first live public fund sync from Data.gov.il, building on the Phase 2C-1 schema. Backend/data-layer only — no matching UI, no link from `ManagedSavingsHolding` to `PublicFund`, no change to the mock/fallback public performance display, no admin UI beyond the CLI trigger, no scheduled sync.
+
+Completed:
+- **Data.gov.il `datastore_search` client** (`src/lib/public-data/data-gov-client.ts`): calls `https://data.gov.il/api/3/action/datastore_search` only — `datastore_search_sql` is never used. Supports `resource_id`, `limit`, `offset`, optional `filters`, optional `q`. Treats an HTTP 200 response carrying `{ success: false }` as an error (`DataGovApiError`). Uses an `AbortController` timeout (default 20s). Sequential, low-concurrency pagination via `paginateDatastoreSearch` (default page size 5,000) — no parallel page fetches.
+- **Typed raw record handling** (`src/lib/public-funds/types.ts`): `RawGemelNetRecord`/`RawPensionNetRecord`/`RawPublicFundRecord` types covering all spec fields as optional, since fields may be missing depending on source/period.
+- **Normalization layer** (`src/lib/public-funds/normalize-public-fund-record.ts`, `src/lib/public-funds/parsing.ts`): single shared `normalizePublicFundRecord` function for both GemelNet and PensionNet, branching only where field names differ (`PARENT_COMPANY_*` for PensionNet; `TARGET_POPULATION`/`SPECIALIZATION`/`SUB_SPECIALIZATION` for GemelNet). Safe parsing helpers (`parseNumeric`, `parseString`, `parseReportPeriod` for `YYYYMM`, `parseSourceDateTime` for `YYYY-MM-DD HH:MM:SS`) never throw. Rows missing required core fields (`FUND_ID`, `FUND_NAME`, `MANAGING_CORPORATION`, `REPORT_PERIOD`, `MONTHLY_YIELD`, `YEAR_TO_DATE_YIELD`) are skipped and counted, not thrown. `productType` is never set by normalization — stays null/unknown by design.
+- **`PublicFund`/`FundReturn` upsert behavior** (`src/lib/public-funds/sync-public-funds.ts`): `PublicFund` upserted via `@@unique([source, fundId])`; `FundReturn` upserted via `@@unique([publicFundId, reportPeriod])`. Counts (`insertedCount`/`updatedCount`/`skippedCount`/`errorCount`) tracked at `FundReturn` granularity (one source row = one `FundReturn`), using an existence check before each upsert to classify insert vs. update.
+- **`PublicDataSyncRun` lifecycle tracking:** a sync run row is created with `status=running` before fetching, then updated to `success` (with final counts) or `failed` (with `errorMessage`) once the resource's sync completes or a fatal error occurs. Row-level DB errors are caught per row and counted without aborting the whole sync; only a fatal pipeline error (e.g., CKAN unreachable) aborts a resource's sync.
+- **Manual CLI trigger:** `npm run sync:public-funds:local` (`scripts/sync-public-funds.ts`). Defaults to syncing `isCurrent=true` resources only (current GemelNet + current PensionNet) — resource config is read from the `PublicDataResource` table, not hardcoded. Optional `--source=gemelnet|pensionnet` / `--resourceId=<id>` flags. Prints a concise per-resource summary (source, label, resource ID, status, counts, duration, `syncRunId`) — no raw rows logged. `PublicDataResource.lastSyncedAt` updates only on successful sync.
+- **Current-resource default:** historical 1999–2022 and yearly-archive resources are not synced by default in this phase.
+
+Live Local Sync Verification (2026-06-30):
+- `PublicDataResource` count: 6
+- `PublicFund` count: 1,106 (gemelnet=799 / pensionnet=307)
+- `FundReturn` count: 26,820 (gemelnet=19016 / pensionnet=7804)
+- `PublicDataSyncRun` count: 2 success rows
+- GemelNet: inserted=19016, updated=0, skipped=1803, errors=0
+- PensionNet: inserted=7804, updated=0, skipped=328, errors=0
+- Skipped rows verified as legitimate (e.g., guaranteed-return tracks reporting `null` yield for that period), not a parsing defect.
+- `lastSyncedAt` set only on the two current resources synced; both historical resources remain untouched.
+
+Out of Scope (Not Implemented in Phase 2C-2):
+- `ManagedSavingsHolding` changes — no holdings modified, no FK/link added, `officialFundId` unchanged.
+- Any UI changes — no matching UI, no admin sync UI, no public performance display changes (still mock/fallback).
+- Matching/linking `PublicFund` to `ManagedSavingsHolding` (Phase 2C-3).
+- Scheduled sync (Vercel Cron).
+- Historical (1999–2022) resource backfill.
+
+Automated Checks:
+- `npm run db:validate` — passed
+- `npm run db:generate` — passed
+- `npm run lint` — passed (0 errors)
+- `npx tsc --noEmit` — passed (no type errors)
+- `npm run build` — passed (pre-existing unrelated `ENVIRONMENT_FALLBACK` warning only)
+- `npm run db:migrate:local` — passed (no pending migrations, schema unchanged)
+- `npm run db:seed:local` — passed (idempotent)
+- `npm run sync:public-funds:local` — passed, live sync verified against Data.gov.il (see counts above)
+
+Known Deferred Items:
+- Matching UI not implemented.
+- Public performance display still fallback/mock.
+- `ManagedSavingsHolding` relation to `PublicFund` not added.
+- Scheduled sync not implemented.
+- Historical backfill not default.
+- Product type inference unresolved (kept nullable/`unknown` by design).
+- AUM units not display-approved yet.
+- `ACTUARIAL_ADJUSTMENT` (PensionNet) observed in live data but not mapped — no corresponding schema column.
+- No automated tests added — no Vitest/test infrastructure exists yet in the repo. Normalization/parsing functions are pure and isolated, ready to test once Vitest is introduced.
+- Custom horizon projection edge case remains deferred (pre-existing, unrelated to this phase).
+
+Branch History:
+- Feature branch: `feature/public-fund-sync`
+- Merged into: `master`
+- Commit: `feat: add manual public fund sync`

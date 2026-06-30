@@ -2,7 +2,7 @@
 
 ## Feature Name
 
-Phase 2C-1 — Public Fund Schema and Resource Configuration
+Phase 2C-2 — Manual Public Fund Live Sync + Normalization
 
 ### Phase Breakdown
 
@@ -13,8 +13,9 @@ Phase 2C-1 — Public Fund Schema and Resource Configuration
 - **Phase 2B-2: Managed Savings DB-backed Actions and UI** — COMPLETED (2026-06-29)
 - **Phase 2B-3: Managed Savings Hardening & QA Audit** — COMPLETED AND VERIFIED (2026-06-29)
 - **Phase 2C-1: Public Fund Schema and Resource Configuration** — COMPLETED AND VERIFIED (2026-06-30)
-- **Phase 2C-2: Public Fund Live Sync** — Not started
+- **Phase 2C-2: Public Fund Live Sync** — COMPLETED AND VERIFIED (2026-06-30)
 - **Phase 2C-3: Public Fund Matching/Linking** — Not started
+- **Phase 2C-4: Public Performance Display Replacement** — Not started
 
 ## Status
 
@@ -26,19 +27,22 @@ Phase 2B: **COMPLETED AND VERIFIED** (2026-06-29)
   - 2B-2: DB-backed Actions and UI — COMPLETED AND VERIFIED (2026-06-29)
   - 2B-3: Hardening & QA Audit — COMPLETED AND VERIFIED (2026-06-29)
 Phase 2C-1: Public Fund Schema and Resource Configuration — **COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report; schema, migration, seed/config, documentation, and automated checks accepted.
-Phase 2C-2 (live Data.gov.il sync): **Not started.**
+Phase 2C-2: Manual Public Fund Live Sync + Normalization — **COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report; Data.gov.il `datastore_search` client, GemelNet/PensionNet normalization, sync service, manual CLI trigger (`npm run sync:public-funds:local`), live local sync verification, documentation, and automated checks accepted. Merged into `master`.
 Phase 2C-3 (matching/linking to ManagedSavingsHolding): **Not started.**
+Phase 2C-4 (public performance display replacement): **Not started.**
 
 ## Known Limitations / Deferred Items
 
 - **`<html lang/dir>` SSR for English routes:** For `/en/*` routes, the initial server-rendered HTML has `lang="he" dir="rtl"` on the `<html>` element (from the minimal root layout). `SetHtmlAttributes` corrects this after client hydration. No visible layout flash — `AppShell` renders with `dir="ltr"` in SSR HTML. Should be addressed in a dedicated i18n hardening task before production.
 - **Dev-user stub:** All DB operations use `dev@mybalance.local`. Auth.js and production multi-user isolation are future scope.
-- **Public track performance:** Remains mock/fallback data until Phase 2C-2/2C-3 connect Data.gov.il.
-- **Phase 2C-2 live Data.gov.il sync:** Not implemented. `PublicFund`/`FundReturn`/`PublicDataSyncRun` schema exists (Phase 2C-1) but no API client, normalization, or sync logic has been written.
+- **Public track performance:** Remains mock/fallback data on the Managed Savings page. Phase 2C-2 syncs `PublicFund`/`FundReturn` data into the DB but does not change what the UI displays — replacement is planned for Phase 2C-3/2C-4.
 - **Public fund matching UI:** Not implemented. Planned for Phase 2C-3.
 - **ManagedSavingsHolding relation to PublicFund:** Not added yet. `officialFundId` remains a plain optional string. Linking is planned for Phase 2C-3.
 - **Product type inference for PublicFund:** Unresolved. GemelNet does not expose a clean product type column; `productType` must remain nullable / allow `unknown` until a future phase defines safe inference rules.
 - **AUM units:** Not display-approved yet. `FundReturn.assetsUnderManagement` must not be displayed in UI until units are confirmed.
+- **`ACTUARIAL_ADJUSTMENT` (PensionNet):** Observed in live Data.gov.il records but has no corresponding schema column — not mapped or stored. No functional impact in this phase.
+- **Scheduled sync:** Not implemented. Sync is manual CLI trigger only (`npm run sync:public-funds:local`).
+- **Historical resource backfill:** 1999–2022 and yearly-archive resources are not synced by default; only `isCurrent=true` resources sync automatically.
 - **Custom horizon projection edge case:** Custom horizon for years 2–4, 6–9, 11–14 returns 0 in the Phase 2A projection model (normal usage defaults to 20 years). Remains deferred.
 
 ## Context
@@ -649,3 +653,73 @@ Add the database schema and seed/config records needed for future public GemelNe
 - `npm run lint` — must pass
 - `npx tsc --noEmit` — must pass
 - `npm run build` — must pass
+
+---
+
+## Phase 2C-2: Public Fund Live Sync
+
+### Status
+
+**COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report. Merged into `master` from `feature/public-fund-sync`.
+
+### Goal
+
+First live sync from Data.gov.il into `PublicFund`/`FundReturn`, building on the Phase 2C-1 schema. Backend/data-layer only — no matching UI, no link from `ManagedSavingsHolding` to `PublicFund`, no change to the mock/fallback public performance display.
+
+### Scope
+
+- `src/lib/public-data/data-gov-client.ts` — typed CKAN `datastore_search` client (timeout/abort handling, treats HTTP-200-with-`success:false` as an error, sequential pagination via `paginateDatastoreSearch`).
+- `src/lib/public-funds/types.ts` — raw GemelNet/PensionNet record types (all fields optional).
+- `src/lib/public-funds/parsing.ts` — safe parsing helpers (`parseNumeric`, `parseString`, `parseReportPeriod`, `parseSourceDateTime`).
+- `src/lib/public-funds/normalize-public-fund-record.ts` — single normalization function shared by GemelNet and PensionNet, branching only on the fields that actually differ (`PARENT_COMPANY_*` for PensionNet; `TARGET_POPULATION`/`SPECIALIZATION`/`SUB_SPECIALIZATION` for GemelNet). Skips rows missing required core fields (`FUND_ID`, `FUND_NAME`, `MANAGING_CORPORATION`, `REPORT_PERIOD`, `MONTHLY_YIELD`, `YEAR_TO_DATE_YIELD`). Leaves `productType` unset (stays null/unknown).
+- `src/lib/public-funds/sync-public-funds.ts` — sync service: reads active `PublicDataResource` rows from DB, paginates CKAN records sequentially, normalizes, upserts `PublicFund` and `FundReturn`, writes `PublicDataSyncRun` lifecycle (`running` → `success`/`failed`), updates `PublicDataResource.lastSyncedAt`.
+- `scripts/sync-public-funds.ts` + `npm run sync:public-funds:local` — manual CLI trigger. Defaults to current (`isCurrent=true`) GemelNet and PensionNet resources only. Optional `--source=gemelnet|pensionnet` / `--resourceId=<id>` flags. Prints a concise summary (no raw rows).
+
+### Count strategy
+
+`PublicFund` spans many report periods, so `insertedCount`/`updatedCount`/`skippedCount`/`errorCount` are tracked at `FundReturn` granularity (one CKAN row = one `FundReturn`). A `FundReturn` existence check runs before each upsert to classify insert vs. update. `PublicFund` itself is always upserted per row (to keep `lastSeenAt` current) but is not counted separately.
+
+### Non-Scope (deferred to later sub-phases)
+
+- Matching/linking UI and FK from `ManagedSavingsHolding` to `PublicFund` (Phase 2C-3).
+- Replacing mock/fallback public track performance on the Managed Savings page (Phase 2C-3/2C-4).
+- Scheduled sync (Vercel Cron).
+- Historical (1999–2022) resource backfill by default.
+- Admin sync UI (CLI trigger only in this phase).
+- Reliable `productType` inference.
+- AUM display in UI (units not display-approved).
+
+### Local verification (2026-06-30)
+
+Live sync run against current GemelNet (`a30dcbea-a1d2-482c-ae29-8f781f5025fb`) and PensionNet (`6d47d6b5-cb08-488b-b333-f1e717b1e1bd`) resources:
+- GemelNet: inserted=19016, updated=0, skipped=1803, errors=0 (~156s)
+- PensionNet: inserted=7804, updated=0, skipped=328, errors=0 (~77s)
+- Resulting DB state:
+  - `PublicDataResource` count: 6
+  - `PublicFund` count: 1,106 (gemelnet=799 / pensionnet=307)
+  - `FundReturn` count: 26,820 (gemelnet=19016 / pensionnet=7804)
+  - `PublicDataSyncRun` count: 2 success rows
+  - `lastSyncedAt` set on both current resources only (historical resources untouched)
+- Skipped rows verified as legitimate (e.g., guaranteed-return tracks reporting `null` `MONTHLY_YIELD`/`YEAR_TO_DATE_YIELD` for that period), not a parsing defect.
+- `ManagedSavingsHolding` unaffected — no rows created/modified/linked by the sync.
+
+### Acceptance Criteria
+
+- Data.gov.il client calls `datastore_search` only (confirmed: no `datastore_search_sql` usage anywhere in the new code).
+- Current GemelNet and PensionNet resources can be synced manually via `npm run sync:public-funds:local`.
+- Sync reads `PublicDataResource` config from DB — no resource IDs hardcoded in sync logic.
+- Records normalized and upserted into `PublicFund` and `FundReturn`.
+- `PublicDataSyncRun` created and completed with status/counts.
+- `PublicDataResource.lastSyncedAt` updates on successful sync.
+- Bad rows skipped/counted without crashing the whole sync.
+- No personal holdings linked or modified.
+- No UI behavior changes.
+
+### QA Requirements
+
+- `npm run db:validate` — must pass
+- `npm run db:generate` — must pass
+- `npm run lint` — must pass
+- `npx tsc --noEmit` — must pass
+- `npm run build` — must pass
+- Local DB: `npm run db:migrate:local`, `npm run db:seed:local`, `npm run sync:public-funds:local` — must pass

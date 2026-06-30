@@ -64,6 +64,23 @@ PensionNet:
 - `datastore_search` is the approved API method for fetching records.
 - No API key is currently required.
 
+### Phase 2C-2 Implementation Notes (2026-06-30)
+
+Live client implemented in `src/lib/public-data/data-gov-client.ts`:
+- Endpoint: `https://data.gov.il/api/3/action/datastore_search` only.
+- Params supported: `resource_id`, `limit`, `offset`, optional `filters` (JSON-encoded), optional `q`.
+- An HTTP 200 response can still carry `{ "success": false }` — this is treated as an error (`DataGovApiError`) rather than a valid result.
+- Requests use an `AbortController` timeout (default 20s).
+- Pagination is sequential, page by page (`paginateDatastoreSearch`), with a default page size of 5,000 records. No concurrent/parallel page fetches.
+- No raw response bodies are logged by default.
+
+Confirmed live record shape (sampled 2026-06-30):
+- GemelNet rows include `TARGET_POPULATION`, `SPECIALIZATION`, `SUB_SPECIALIZATION`; no `PARENT_COMPANY_ID`/`PARENT_COMPANY_NAME`.
+- PensionNet rows include `PARENT_COMPANY_ID`, `PARENT_COMPANY_NAME`, `ACTUARIAL_ADJUSTMENT`; no `TARGET_POPULATION`/`SPECIALIZATION`/`SUB_SPECIALIZATION`.
+- `REPORT_PERIOD` is numeric `YYYYMM` (e.g. `202401`).
+- `INCEPTION_DATE`/`CURRENT_DATE` are text datetimes (`YYYY-MM-DD HH:MM:SS`).
+- Some funds (e.g. guaranteed-return tracks) legitimately report `null` for `MONTHLY_YIELD`/`YEAR_TO_DATE_YIELD` in a given period — these rows are skipped, not treated as errors.
+
 ## Sync Strategy
 
 Do not call Data.gov.il directly from every page view.
