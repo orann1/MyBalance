@@ -2,7 +2,7 @@
 
 ## Feature Name
 
-Phase 2C-3A — Public Fund Matching Search Backend (COMPLETED AND VERIFIED)
+Phase 2C-3B — Public Fund Matching UI + Confirm Link / Unlink (COMPLETED AND VERIFIED)
 
 ### Phase Breakdown
 
@@ -15,7 +15,7 @@ Phase 2C-3A — Public Fund Matching Search Backend (COMPLETED AND VERIFIED)
 - **Phase 2C-1: Public Fund Schema and Resource Configuration** — COMPLETED AND VERIFIED (2026-06-30)
 - **Phase 2C-2: Public Fund Live Sync** — COMPLETED AND VERIFIED (2026-06-30)
 - **Phase 2C-3A: Public Fund Matching Search Backend** — COMPLETED AND VERIFIED (2026-06-30)
-- **Phase 2C-3B: Public Fund Matching/Linking (UI, link/unlink, FK)** — Not started
+- **Phase 2C-3B: Public Fund Matching/Linking (UI, link/unlink, FK)** — COMPLETED AND VERIFIED (2026-07-02), merged into `master`
 - **Phase 2C-4: Public Performance Display Replacement** — Not started
 
 ## Status
@@ -30,16 +30,15 @@ Phase 2B: **COMPLETED AND VERIFIED** (2026-06-29)
 Phase 2C-1: Public Fund Schema and Resource Configuration — **COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report; schema, migration, seed/config, documentation, and automated checks accepted.
 Phase 2C-2: Manual Public Fund Live Sync + Normalization — **COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report; Data.gov.il `datastore_search` client, GemelNet/PensionNet normalization, sync service, manual CLI trigger (`npm run sync:public-funds:local`), live local sync verification, documentation, and automated checks accepted. Merged into `master`.
 Phase 2C-3A: Public Fund Matching Search Backend — **COMPLETED AND VERIFIED** (2026-06-30). Product Owner approved the implementation report; backend/data-layer search and candidate ranking over local `PublicFund`/`FundReturn` records, Hebrew-aware matching normalization, deterministic candidate scoring, Zod-validated server action, optional CLI smoke test, documentation updates, and automated checks accepted. Merged into `master` from `feature/public-fund-matching-search`. No linking UI, no FK from `ManagedSavingsHolding` to `PublicFund`, no replacement of mock/fallback public performance display.
-Phase 2C-3B (matching/linking UI, confirm link/unlink, FK to ManagedSavingsHolding): **Not started.**
+Phase 2C-3B: Public Fund Matching UI + Confirm Link / Unlink — **COMPLETED AND VERIFIED** (2026-07-02). Product Owner browser QA approved. Committed and merged into `master`. Adds a nullable `publicFundId` FK from `ManagedSavingsHolding` to `PublicFund` (user-confirmed only, never auto-linked), Zod-validated `linkManagedSavingsHoldingToPublicFund`/`unlinkManagedSavingsHoldingFromPublicFund` server actions, a `PublicFundMatchModal` search/select UI reusing the Phase 2C-3A local search backend, link/change/unlink management surface in `EditManagedFundModal`, and a read-only public fund returns card in `ExpandedManagedSavingsRow` (linked: KPI return metrics + labelled metadata row + disclaimer; unlinked: compact amber warning only). Linked fund `latestAnnualized5YrReturn` drives the 5Y table column and `projectSimulations` when available via `getEffectiveAnnualReturn`. Add/Edit modal visual redesign (slate-based hierarchy) and modal scrollbar polish also included. No AUM display, no auto-linking, no Data.gov.il calls, no Phase 2C-4 implementation.
 Phase 2C-4 (public performance display replacement): **Not started.**
 
 ## Known Limitations / Deferred Items
 
 - **`<html lang/dir>` SSR for English routes:** For `/en/*` routes, the initial server-rendered HTML has `lang="he" dir="rtl"` on the `<html>` element (from the minimal root layout). `SetHtmlAttributes` corrects this after client hydration. No visible layout flash — `AppShell` renders with `dir="ltr"` in SSR HTML. Should be addressed in a dedicated i18n hardening task before production.
 - **Dev-user stub:** All DB operations use `dev@mybalance.local`. Auth.js and production multi-user isolation are future scope.
-- **Public track performance:** Remains mock/fallback data on the Managed Savings page. Phase 2C-2 syncs `PublicFund`/`FundReturn` data into the DB but does not change what the UI displays — replacement is planned for Phase 2C-3/2C-4.
-- **Public fund matching UI:** Not implemented. Phase 2C-3A added backend search/ranking only. UI is planned for Phase 2C-3B.
-- **ManagedSavingsHolding relation to PublicFund:** Not added yet. `officialFundId` remains a plain optional string. Linking is planned for Phase 2C-3B.
+- **Public track performance:** Remains mock/fallback data on the Managed Savings page. Phase 2C-2 syncs `PublicFund`/`FundReturn` data into the DB and Phase 2C-3B adds a user-confirmed link, but neither changes what the performance card displays — replacement is planned for Phase 2C-4.
+- **ManagedSavingsHolding.publicFundId:** Added in Phase 2C-3B as a nullable FK to `PublicFund` (user-confirmed via `EditManagedFundModal`, `onDelete: SetNull`). The linked fund's `latestAnnualized5YrReturn` is used as the projection assumption by `getEffectiveAnnualReturn` when available. `officialFundId` remains a separate, unrelated plain optional string — not repurposed.
 - **Product type inference for PublicFund:** Unresolved. GemelNet does not expose a clean product type column; `productType` must remain nullable / allow `unknown` until a future phase defines safe inference rules.
 - **AUM units:** Not display-approved yet. `FundReturn.assetsUnderManagement` must not be displayed in UI until units are confirmed.
 - **`ACTUARIAL_ADJUSTMENT` (PensionNet):** Observed in live Data.gov.il records but has no corresponding schema column — not mapped or stored. No functional impact in this phase.
@@ -799,3 +798,70 @@ Run against local DB with Phase 2C-2 synced data (`PublicFund`=1,106, `FundRetur
 - `source=pensionnet` filter (`--query="כלל" --source=pensionnet --limit=5`): 5 pensionnet-only candidates, custom limit respected.
 - Empty/no-query edge case (no flags): 0 candidates returned, no broad DB scan triggered (confirms the empty-input short-circuit).
 - No Data.gov.il calls made during any verification run — confirmed by code inspection (`search-public-funds.ts` only calls `prisma.publicFund`/`prisma.fundReturn`).
+
+---
+
+## Phase 2C-3B: Public Fund Matching UI + Confirm Link / Unlink
+
+### Status
+
+**COMPLETED AND VERIFIED** (2026-07-02). Product Owner browser QA approved. Committed and merged into `master` from `feature/public-fund-linking-ui`.
+
+### Goal
+
+Add a minimal, explicit, user-confirmed link from `ManagedSavingsHolding` to `PublicFund`, expose safe server actions for link/unlink, and add a matching/search UI in the Managed Savings expanded row using the Phase 2C-3A local search backend. Does not replace the mock/fallback public performance display and does not auto-link anything.
+
+### Scope
+
+- **Schema**: `ManagedSavingsHolding.publicFundId String?` (nullable FK to `PublicFund`, `onDelete: SetNull`, indexed). `PublicFund.managedSavingsHoldings` reverse relation added. `officialFundId` unchanged and unrelated — not repurposed. Migration: `prisma/migrations/20260630142325_add_public_fund_linking_to_managed_savings/`.
+- **Server actions** (`src/lib/actions/public-fund-linking-actions.ts`): `linkManagedSavingsHoldingToPublicFund` and `unlinkManagedSavingsHoldingFromPublicFund`. Zod-validated (`src/lib/validation/public-fund-linking.ts`, both ids `z.string().min(1)` — `cuid()` was intentionally not used because seeded dev holdings use stable IDs like "hist-001" that fail cuid regex; security gate is the ownership check in the action body), ownership-checked against the dev user, reject linking archived holdings, verify the target `PublicFund` exists, update `publicFundId` only, call `revalidateTag`, return `{ ok: true, holding }` or `{ ok: false, error: "validation" | "not_found" | "unauthorized" | "server_error" }`. No DB errors or stack traces exposed to the client.
+- **Data layer**: `src/lib/public-funds/latest-fund-returns.ts` — batch helper (`getLatestReportPeriodsByPublicFundIds`) to resolve each linked fund's latest `FundReturn.reportPeriod` without N+1 queries. `serializeHolding` (`src/lib/managed-savings/serializers.ts`) now accepts the Prisma-included `publicFund` relation and produces an optional `linkedPublicFund` field (`id`, `source`, `fundId`, `fundName`, `managingCompany`, `latestReportPeriod`, `latestMonthlyReturn`, `latestYtdReturn`, `latestAnnualized3YrReturn`, `latestAnnualized5YrReturn`), no AUM, no full `FundReturn` history. `getEffectiveAnnualReturn(investment)` in `src/lib/mock/managed-savings-data.ts` returns the linked fund's `latestAnnualized5YrReturn` when non-null, falling back to `investment.trackPerformance.last5Years` — used by `projectSimulations` so projections reflect live public data when linked. `fetchHoldingsForDevUser` (`src/lib/data/managed-savings.ts`) includes `publicFund` and batch-resolves latest report periods. `createManagedSavingsHolding`/`updateManagedSavingsHolding` (`src/lib/actions/managed-savings-actions.ts`) include `publicFund` and preserve/omit the link correctly (linking/unlinking is a separate action; add/edit never touches `publicFundId`).
+- **UI**: `PublicFundMatchModal` (`src/components/managed-savings/PublicFundMatchModal.tsx`) — local-DB-only search via `searchPublicFundsForMatchingAction` (no Data.gov.il calls), prefilled query from track/company name, source filter defaulting to `gemelnet`, candidate cards showing fund identity and return metrics (no AUM), explicit "קשר לקרן זו" / "Link this fund" confirm button. `EditManagedFundModal` is the single management surface for link/change/unlink: shows source badge + action buttons + labelled metadata inset when linked, or a "Link to public fund data" button when unlinked. `ExpandedManagedSavingsRow` is read-only/summary only: shows a unified green card (KPI return metric cells + divider + labelled metadata row with Fund name / Managing company / Fund number / Last fund update + disclaimer) when linked, or a compact amber warning when unlinked — no link/change/unlink controls in the expanded row. Add/Edit modal full visual redesign (`bg-slate-50` outer, `bg-white shadow-sm rounded-2xl` section cards, `bg-slate-100/70` header bands, `h-11 border-slate-300` inputs, `font-bold uppercase` labels, `bg-white shadow-[0_-2px_10px_...]` sticky footer). Modal scrollbar polished with custom `modal-scrollbar` CSS utility (6px thumb, slate-300/400, Firefox `scrollbar-width: thin`). State changes propagate via `onInvestmentUpdate` threaded through `ManagedSavingsTable` → `ManagedSavingsPageClient`.
+- **i18n**: New `managedSavings.publicFundLinking` namespace (and nested `sourceLabels`, `linkedSummary`, `modal`, `modal.candidate`) added to both `src/messages/he.json` and `src/messages/en.json`. No hardcoded UI text. Hebrew copy avoids "your return" / "best fund" framing; uses neutral phrasing ("נתוני קרן ציבוריים", "קשר לנתוני קרן ציבוריים") plus explicit disclaimers that linked data is public/fund-level-only and does not change personal balance or contributions.
+
+### Non-Scope (deferred)
+
+- Replacing the mock/fallback public performance display (Phase 2C-4).
+- AUM display anywhere in the UI.
+- Auto-linking / suggested-match acceptance without explicit user action.
+- Any Data.gov.il calls (matching UI searches the local DB only, reusing Phase 2C-3A).
+- Financial advice or fund-comparison language.
+
+### Acceptance Criteria
+
+- `publicFundId` FK added, nullable, `onDelete: SetNull`, indexed; `officialFundId` untouched.
+- Link/unlink server actions are Zod-validated, ownership-checked, reject archived holdings, verify `PublicFund` existence, and never leak DB errors.
+- Linking/unlinking only ever changes `publicFundId` — no other holding fields are touched.
+- Matching UI is local-DB-only (no live Data.gov.il calls) and requires explicit user confirmation to link.
+- No AUM field displayed anywhere in the matching or linked-summary UI.
+- All new UI text sourced from `he.json`/`en.json` — no hardcoded strings.
+- Existing add/edit/delete holding flows and the public performance display are unchanged.
+
+### QA Requirements
+
+- `npm run db:validate`, `npm run db:generate`, `npm run db:migrate:local`, `npm run db:seed:local` — must pass.
+- `npm run lint`, `npx tsc --noEmit`, `npm run build` — must pass.
+- Browser QA on `/managed-savings` and `/en/managed-savings`: open page, expand row, open matching modal, search, link, verify persistence after refresh, change link, unlink, verify add/edit/delete still work, verify no unintended change to the performance card, verify no cross-locale hardcoded text.
+
+### Verification Performed
+
+**Automated checks (final):**
+- `npm run db:validate` — passed.
+- `npm run db:generate` — passed (Prisma Client v7.8.0 generated cleanly).
+- `npm run db:migrate:local` — passed (already in sync, no pending migrations).
+- `npm run db:seed:local` — passed (6 PublicDataResource rows confirmed idempotent).
+- `npm run lint` — passed, 0 errors/warnings.
+- `npx tsc --noEmit` — passed, no errors (exit code 0).
+- `npm run build` — passed (all routes compiled, pre-existing unrelated `ENVIRONMENT_FALLBACK` warning only).
+
+**Server action verification (Phase 2C-3B initial):**
+- Direct DB verification: linking an active holding to a real `PublicFund` persists `publicFundId`; linking an archived holding rejected (`error: "validation"`); non-existent `publicFundId` rejected by Zod; unlinking clears `publicFundId` to `null`.
+
+**Product Owner browser QA (2026-07-02, final approval):**
+- Link/unlink working correctly.
+- Regular edit (add/update holding) working correctly.
+- Linked 5Y return displayed in table and projections updated correctly.
+- Compact unlinked warning shown in expanded row.
+- Linked public fund metadata displayed correctly in one labelled horizontal row.
+- Add/Edit modal visual redesign accepted.
+- Modal scrollbar polish accepted.

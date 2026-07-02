@@ -283,6 +283,7 @@
     },
     "publicTrackPerformance": "ביצועי המסלול הציבוריים",
     "publicDataNote": "אלה ביצועי מסלול ציבוריים, לא תשואה אישית.",
+    "fallbackTrackNote": "נתוני מסלול לדוגמה — קשר קרן ציבורית לצפייה בנתונים ציבוריים",
     "lastMonth": "חודש האחרון",
     "last1Year": "שנה אחרונה",
     "last3Years": "3 שנים",
@@ -330,6 +331,66 @@
       "title": "למחוק את החיסכון?",
       "body": "פעולה זו תסיר את הקרן \"{name}\" מהרשימה. לא ניתן לבטל פעולה זו.",
       "confirm": "מחק"
+    },
+    "publicFundLinking": {
+      "sectionTitle": "נתוני קרן ציבוריים",
+      "notLinkedDescription": "לא קושרה קרן ציבורית להשקעה זו.",
+      "linkButton": "קשר לנתוני קרן ציבוריים",
+      "changeLinkButton": "שנה קישור",
+      "unlinkButton": "נתק קישור",
+      "unlinkConfirmText": "לנתק את הקישור לקרן הציבורית?",
+      "unlinkConfirmButton": "אישור ניתוק",
+      "unlinkCancelButton": "ביטול",
+      "safetyNote": "הקישור אינו משנה את היתרה, ההפקדות או ההנחות האישיות שלך.",
+      "notLinkedCompactWarning": "לא קושרה קרן ציבורית — קשר קרן דרך עריכת ההחזקה כדי לראות נתוני תשואה ציבוריים.",
+      "expandedNotLinkedHint": "ניתן לקשר קרן ציבורית דרך עריכת ההחזקה",
+      "publicDataOnlyNote": "נתוני קרן ציבוריים ברמת הקרן בלבד",
+      "linkedSummary": {
+        "source": "מקור",
+        "fundName": "שם הקרן",
+        "managingCompany": "חברה מנהלת",
+        "fundId": "מספר קרן",
+        "latestReportPeriod": "עדכון אחרון"
+      },
+      "sourceLabels": {
+        "gemelnet": "גמל-נט",
+        "pensionnet": "פנסיה-נט"
+      },
+      "linkedPerformance": {
+        "sectionTitle": "תשואות קרן ציבורית מקושרת",
+        "publicDataNote": "נתוני ביצוע ציבוריים ברמת הקרן. אינם מייצגים תשואה אישית.",
+        "monthlyReturn": "תשואה חודשית",
+        "ytdReturn": "תשואה מצטברת (מתחילת שנה)",
+        "annualized3Yr": "שנתית ממוצעת — 3 שנים",
+        "annualized5Yr": "שנתית ממוצעת — 5 שנים",
+        "reportPeriod": "תקופת דיווח",
+        "noMetrics": "אין נתוני תשואה זמינים לקרן זו"
+      },
+      "modal": {
+        "title": "קישור לקרן ציבורית",
+        "subtitle": "חפש קרן ציבורית כדי לקשר אותה להשקעה זו",
+        "searchPlaceholder": "חפש לפי שם קרן או חברה מנהלת",
+        "searchButton": "חפש קרן ציבורית",
+        "sourceAll": "הכל",
+        "loading": "מחפש...",
+        "emptyResults": "לא נמצאו קרנות תואמות",
+        "errorSearch": "החיפוש נכשל. נסה שוב.",
+        "candidate": {
+          "fundId": "מזהה קרן",
+          "latestReportPeriod": "תקופת דיווח אחרונה",
+          "monthlyReturn": "תשואה חודשית",
+          "ytdReturn": "תשואה מתחילת השנה",
+          "annualized3Yr": "תשואה שנתית - 3 שנים",
+          "annualized5Yr": "תשואה שנתית - 5 שנים"
+        },
+        "confirmLinkButton": "קשר לקרן זו",
+        "linking": "מקשר...",
+        "errorLink": "הקישור נכשל. נסה שוב.",
+        "errorUnlink": "ניתוק הקישור נכשל. נסה שוב.",
+        "note1": "נתוני הקרן הם ציבוריים וברמת הקרן בלבד. הם אינם מייצגים את התשואה האישית שלך.",
+        "note2": "הקישור לא משנה את היתרה, ההפקדות או ההנחות האישיות שלך.",
+        "close": "סגור"
+      }
     }
   }
 }

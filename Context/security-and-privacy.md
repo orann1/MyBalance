@@ -43,6 +43,19 @@ AI must not:
 PensionNet/GemelNet data is public fund-level data.
 It is not personal user financial data unless combined with user-entered balances.
 
+### Phase 2C-3B — Public Fund Linking
+
+`ManagedSavingsHolding` may carry an optional, user-confirmed `publicFundId` link to a `PublicFund` record:
+
+- The link is identity-only (fund id, fund name, managing company, source, latest report period) plus fund-level public return metrics. AUM is never displayed or stored on the link.
+- The link is created only via explicit user action (`linkManagedSavingsHoldingToPublicFund`) from `EditManagedFundModal` — never inferred or set automatically by sync.
+- Linking/unlinking never changes the holding's balance, contributions, fees, or notes — only `publicFundId` is updated.
+- A linked `ManagedSavingsHolding` creates a combined personal context (personal balance + public fund identity). This combined context must not be logged unnecessarily. Server actions do not log personal balance values alongside linked fund IDs. No personal data is sent to external services.
+- Link/unlink server actions are ownership-checked against the dev user (same pattern as other managed savings writes) and reject operations on holdings the dev user does not own or that are archived.
+- Server action error responses are a closed, generic union (`"validation" | "not_found" | "unauthorized" | "server_error"`) — no DB error messages or stack traces are returned to the client, and personal balances/notes are not logged.
+- Public fund returns are never presented as the user's personal return. The linked fund's `latestAnnualized5YrReturn` is used only as a projection assumption (`getEffectiveAnnualReturn`) — clearly distinguished from personal realized returns. The mock/fallback public performance card is unchanged by this phase.
+- No personal data is sent to Data.gov.il or any external service — the matching UI searches the local DB only (Phase 2C-3A backend).
+
 ## Phase 2B — Managed Savings Persistence
 
 Once Phase 2B persists managed savings holdings to the database:

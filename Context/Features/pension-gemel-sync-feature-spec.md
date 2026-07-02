@@ -14,7 +14,7 @@ Sync public Israeli pension/gemel/hishtalmut fund return data from Data.gov.il.
 This sync provides fund-level public returns only.
 It does not provide personal balances.
 
-This feature is public fund-level only — `PublicFund`/`FundReturn` records are never combined with or linked to a user's `ManagedSavingsHolding` balance unless a future matching phase explicitly does so with user confirmation.
+This feature is public fund-level only — `PublicFund`/`FundReturn` records are never combined with a user's `ManagedSavingsHolding` balance. As of Phase 2C-3B, a `ManagedSavingsHolding` may carry an identity-only link (`publicFundId`) to a `PublicFund`, but that link only ever exists when the user explicitly confirms it via the matching UI; it is never created automatically, and it does not change the personal balance, contributions, or any other field on the holding.
 
 ## Phase 2C-1 Status (2026-06-30)
 
@@ -38,7 +38,21 @@ Still not implemented: admin sync UI, scheduled sync, matching/linking UI, and a
 - `searchPublicFundsForMatchingAction` (`src/lib/actions/public-fund-matching-actions.ts`) — Zod-validated server action wrapping the search, not yet wired to any client/UI.
 - Optional CLI smoke test: `npm run search:public-funds:local -- --query="הראל" --source=gemelnet`.
 
-**No matching/confirmation UI, no confirm-link/unlink actions, and no FK from `ManagedSavingsHolding` to `PublicFund` are implemented in Phase 2C-3A.** User confirmation will still be required before any future link is created — this phase only returns ranked candidates for a future UI to present. Phase 2C-3B (matching/linking UI, confirm link/unlink, FK) has not started. See `Context/current-feature.md` Phase 2C-3A for full scope/acceptance criteria and local verification results.
+**No matching/confirmation UI, no confirm-link/unlink actions, and no FK from `ManagedSavingsHolding` to `PublicFund` are implemented in Phase 2C-3A.** User confirmation will still be required before any future link is created — this phase only returns ranked candidates for a future UI to present. See `Context/current-feature.md` Phase 2C-3A for full scope/acceptance criteria and local verification results.
+
+## Phase 2C-3B Status (2026-07-02)
+
+**COMPLETED AND VERIFIED** (2026-07-02). Product Owner browser QA approved. Committed and merged into `master` from `feature/public-fund-linking-ui`. Implemented the matching/linking UI and confirm-link/unlink actions described as future work in Phase 2C-3A:
+
+- `ManagedSavingsHolding.publicFundId` — nullable FK to `PublicFund`, `onDelete: SetNull`. User-confirmed only via `EditManagedFundModal`; never set by sync or any automatic process.
+- `linkManagedSavingsHoldingToPublicFund` / `unlinkManagedSavingsHoldingFromPublicFund` (`src/lib/actions/public-fund-linking-actions.ts`) — Zod-validated (`z.string().min(1)` — seeded dev IDs fail cuid regex), ownership-checked, reject archived holdings, verify the target `PublicFund` exists, update `publicFundId` only. Linking/unlinking never changes balance, contributions, fees, or notes.
+- `PublicFundMatchModal` (`src/components/managed-savings/PublicFundMatchModal.tsx`) — search UI calling `searchPublicFundsForMatchingAction` (Phase 2C-3A backend, local DB only). Requires an explicit "קשר לקרן זו" / "Link this fund" click — no auto-linking.
+- `EditManagedFundModal` as single management surface: link/change/unlink controls. Linked state shows source badge + action buttons + labelled metadata inset row (`Fund name: X | Managing company: Y | Fund number: Z | Last fund update: W`).
+- `ExpandedManagedSavingsRow` is read-only: unified green card (KPI return metrics + labelled metadata row + disclaimer) when linked; compact amber warning when unlinked. No link/change/unlink controls in the expanded row.
+- Linked `latestAnnualized5YrReturn` used as a projection assumption by `getEffectiveAnnualReturn` — not presented as personal realized return.
+- Add/Edit modal visual redesign (slate-based hierarchy) and modal scrollbar polish also included.
+
+The fund-level public data boundary is unchanged: no AUM displayed, public returns are never presented as personal returns, and the mock/fallback public performance card is untouched. Phase 2C-4 (full performance display replacement) is not started. See `Context/current-feature.md` Phase 2C-3B and `Context/feature-history.md` for full scope, acceptance criteria, and verification results.
 
 ### Product Type Inference Risk
 

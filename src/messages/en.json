@@ -283,6 +283,7 @@
     },
     "publicTrackPerformance": "Public Track Performance",
     "publicDataNote": "These are public track returns, not personal returns.",
+    "fallbackTrackNote": "Example track data — link a public fund to see public returns",
     "lastMonth": "Last Month",
     "last1Year": "Last 1 Year",
     "last3Years": "Last 3 Years",
@@ -330,6 +331,66 @@
       "title": "Delete holding?",
       "body": "This will remove \"{name}\" from your list. This action cannot be undone.",
       "confirm": "Delete"
+    },
+    "publicFundLinking": {
+      "sectionTitle": "Public fund data",
+      "notLinkedDescription": "No public fund is linked to this holding.",
+      "linkButton": "Link to public fund data",
+      "changeLinkButton": "Change link",
+      "unlinkButton": "Unlink",
+      "unlinkConfirmText": "Unlink this public fund?",
+      "unlinkConfirmButton": "Confirm unlink",
+      "unlinkCancelButton": "Cancel",
+      "safetyNote": "Linking does not change your balance, contributions, or personal assumptions.",
+      "notLinkedCompactWarning": "No public fund is linked — use Edit to link a fund and view public return data.",
+      "expandedNotLinkedHint": "Open Edit to link public fund data to this holding",
+      "publicDataOnlyNote": "Public fund-level data only",
+      "linkedSummary": {
+        "source": "Source",
+        "fundName": "Fund name",
+        "managingCompany": "Managing company",
+        "fundId": "Fund number",
+        "latestReportPeriod": "Last fund update"
+      },
+      "sourceLabels": {
+        "gemelnet": "GemelNet",
+        "pensionnet": "PensionNet"
+      },
+      "linkedPerformance": {
+        "sectionTitle": "Linked public fund returns",
+        "publicDataNote": "Public fund-level performance data. Does not represent your personal return.",
+        "monthlyReturn": "Monthly return",
+        "ytdReturn": "Year-to-date return",
+        "annualized3Yr": "3-year annualized",
+        "annualized5Yr": "5-year annualized",
+        "reportPeriod": "Report period",
+        "noMetrics": "No return data available for this fund"
+      },
+      "modal": {
+        "title": "Link to public fund",
+        "subtitle": "Search for a public fund to link to this holding",
+        "searchPlaceholder": "Search by fund name or managing company",
+        "searchButton": "Search public fund",
+        "sourceAll": "All",
+        "loading": "Searching...",
+        "emptyResults": "No matching funds found",
+        "errorSearch": "Search failed. Please try again.",
+        "candidate": {
+          "fundId": "Fund ID",
+          "latestReportPeriod": "Latest report period",
+          "monthlyReturn": "Monthly return",
+          "ytdReturn": "Year-to-date return",
+          "annualized3Yr": "3-year annualized return",
+          "annualized5Yr": "5-year annualized return"
+        },
+        "confirmLinkButton": "Link this fund",
+        "linking": "Linking...",
+        "errorLink": "Linking failed. Please try again.",
+        "errorUnlink": "Failed to unlink. Please try again.",
+        "note1": "Fund data is public and fund-level only. It does not represent your personal return.",
+        "note2": "Linking does not change your balance, contributions, or personal assumptions.",
+        "close": "Close"
+      }
     }
   }
 }

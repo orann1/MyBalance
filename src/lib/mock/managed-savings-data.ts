@@ -15,6 +15,25 @@ export interface ManagedSavingsInvestment {
   trackPerformance: TrackPerformance;
   // Personal notes — displayed in expanded row only, not in the main table.
   notes?: string;
+  // Phase 2C-3B: user-confirmed link to a public GemelNet/PensionNet fund.
+  // Identity only — never AUM, never the full FundReturn history, never
+  // presented as the user's personal return.
+  linkedPublicFund?: LinkedPublicFund | null;
+}
+
+export interface LinkedPublicFund {
+  id: string;
+  source: "gemelnet" | "pensionnet";
+  fundId: string;
+  fundName: string;
+  managingCompany: string;
+  latestReportPeriod?: string;
+  // Phase 2C-3B UX: latest public return metrics for the linked fund.
+  // Public fund-level only — never the user's personal return.
+  latestMonthlyReturn?: number | null;
+  latestYtdReturn?: number | null;
+  latestAnnualized3YrReturn?: number | null;
+  latestAnnualized5YrReturn?: number | null;
 }
 
 export interface TrackPerformance {
@@ -220,6 +239,22 @@ export function getTrackPerformance(investment: ManagedSavingsInvestment): Track
   return investment.trackPerformance;
 }
 
+/**
+ * Returns the effective annual return rate (as a percent, e.g. 13.54) for
+ * display and projection purposes.
+ *
+ * Priority:
+ *   1. linkedPublicFund.latestAnnualized5YrReturn — public fund-level data, not
+ *      the user's personal return. Used as a projection assumption only.
+ *   2. trackPerformance.last5Years — mock/fallback value.
+ */
+export function getEffectiveAnnualReturn(investment: ManagedSavingsInvestment): number {
+  if (investment.linkedPublicFund?.latestAnnualized5YrReturn != null) {
+    return investment.linkedPublicFund.latestAnnualized5YrReturn;
+  }
+  return investment.trackPerformance.last5Years;
+}
+
 export function projectSimulations(
   investment: ManagedSavingsInvestment,
   customYears: number
@@ -240,8 +275,9 @@ export function projectSimulations(
     const totalContributions =
       investment.currentBalance + investment.monthlyContribution * monthsOfContribution;
 
-    // Simplified compound growth: assume average 6% annual return
-    const baseGrowthRate = 0.06;
+    // Annual return: prefer linked public fund 5Y annualized return, else mock fallback.
+    // Divided by 100 to convert percent to decimal. Not the user's personal realized return.
+    const baseGrowthRate = getEffectiveAnnualReturn(investment) / 100;
     const adjustedGrowthRate = baseGrowthRate - investment.accumulationFeePercent / 100;
 
     const projectedValue = Math.round(

@@ -1,9 +1,10 @@
-import type { ManagedSavingsHolding } from "@prisma/client";
+import type { ManagedSavingsHolding, PublicFund } from "@prisma/client";
 import { fromMinorUnits, bpsToPercent } from "@/lib/financial/units";
 import type {
   ManagedSavingsInvestment,
   TrackPerformance,
 } from "@/lib/mock/managed-savings-data";
+import type { LatestFundReturnSummary } from "@/lib/public-funds/latest-fund-returns";
 
 // Phase 2B fallback: public track performance is mock data until Phase 2C connects Data.gov.il.
 const FALLBACK_PERFORMANCE: Record<string, TrackPerformance> = {
@@ -39,9 +40,14 @@ const FALLBACK_PERFORMANCE: Record<string, TrackPerformance> = {
 
 // Maps a Prisma ManagedSavingsHolding record to the UI domain type.
 // Converts BigInt money fields to numbers and bps fees to percent values.
-// trackPerformance is mock fallback until Phase 2C.
+// trackPerformance is mock fallback until Phase 2C-4.
+//
+// latestSummary must be resolved by the caller (batched where possible)
+// and only applies when record.publicFund is present — see
+// src/lib/public-funds/latest-fund-returns.ts.
 export function serializeHolding(
-  record: ManagedSavingsHolding
+  record: ManagedSavingsHolding & { publicFund?: PublicFund | null },
+  latestSummary?: LatestFundReturnSummary | null
 ): ManagedSavingsInvestment {
   const type = record.type as ManagedSavingsInvestment["type"];
   const dateSource = record.valuationDate ?? record.updatedAt;
@@ -64,5 +70,25 @@ export function serializeHolding(
     officialFundId: record.officialFundId ?? undefined,
     trackPerformance: FALLBACK_PERFORMANCE[type] ?? FALLBACK_PERFORMANCE.gemel,
     notes: record.notes ?? undefined,
+    linkedPublicFund: record.publicFund
+      ? {
+          id: record.publicFund.id,
+          source: record.publicFund.source,
+          fundId: record.publicFund.fundId,
+          fundName: record.publicFund.fundName,
+          managingCompany: record.publicFund.managingCompany,
+          latestReportPeriod: latestSummary
+            ? latestSummary.reportPeriod.toISOString().split("T")[0]
+            : undefined,
+          latestMonthlyReturn: latestSummary ? latestSummary.monthlyReturn : null,
+          latestYtdReturn: latestSummary ? latestSummary.ytdReturn : null,
+          latestAnnualized3YrReturn: latestSummary
+            ? latestSummary.annualized3YrReturn
+            : null,
+          latestAnnualized5YrReturn: latestSummary
+            ? latestSummary.annualized5YrReturn
+            : null,
+        }
+      : null,
   };
 }

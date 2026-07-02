@@ -114,7 +114,8 @@ Planned fields:
 - depositFeeBps (Int — basis points)
 - managingCompany
 - trackName
-- officialFundId (optional — future Data.gov.il / GemelNet matching)
+- officialFundId (optional — raw/official fund identifier as entered by the user; unrelated to `publicFundId`, never repurposed for matching)
+- publicFundId (optional FK to `PublicFund`. **Added in Phase 2C-3B.** User-confirmed only — never auto-linked. `onDelete: SetNull`, indexed, so a personal holding is never deleted as a side effect of `PublicFund` changes.)
 - valuationDate
 - notes (optional — personal, user-owned, displayed in expanded row only)
 - createdAt
@@ -122,7 +123,7 @@ Planned fields:
 
 ### PublicFund
 
-Represents a public GemelNet/PensionNet fund (fund-level, not personal data). **Implemented in Phase 2C-1 (schema/config only — no live sync, no UI, no `ManagedSavingsHolding` link).**
+Represents a public GemelNet/PensionNet fund (fund-level, not personal data). **Schema/config implemented in Phase 2C-1; live sync in Phase 2C-2; local search/matching backend in Phase 2C-3A; user-confirmed link from `ManagedSavingsHolding` in Phase 2C-3B.**
 
 Fields:
 - id
@@ -145,9 +146,9 @@ Fields:
 - createdAt
 - updatedAt
 
-Constraints: `@@unique([source, fundId])`. Indexes on `source`, `fundId`, `fundName`, `managingCompany`.
+Constraints: `@@unique([source, fundId])`. Indexes on `source`, `fundId`, `fundName`, `managingCompany`. Reverse relation: `managedSavingsHoldings ManagedSavingsHolding[]` (added Phase 2C-3B).
 
-`ManagedSavingsHolding` is NOT linked to `PublicFund` in Phase 2C-1. `officialFundId` on `ManagedSavingsHolding` remains unchanged. Matching/linking is planned for Phase 2C-3.
+`ManagedSavingsHolding.publicFundId` links to this model as of Phase 2C-3B — nullable, user-confirmed only via the `linkManagedSavingsHoldingToPublicFund` server action, never set automatically. `officialFundId` on `ManagedSavingsHolding` remains a separate, unrelated plain optional string.
 
 ### FundReturn
 
@@ -383,11 +384,28 @@ Seed: `prisma/seed.ts` now also upserts 6 `PublicDataResource` rows (3 GemelNet 
 
 `ManagedSavingsHolding` is unchanged — no FK to `PublicFund` added yet. `officialFundId` remains a plain optional string. Linking is planned for Phase 2C-3.
 
+## Phase 2C-3B Implementation Notes (2026-06-30)
+
+Adds a nullable `publicFundId` FK on `ManagedSavingsHolding` referencing `PublicFund`, plus the reverse relation `PublicFund.managedSavingsHoldings`.
+
+Migration: `prisma/migrations/20260630142325_add_public_fund_linking_to_managed_savings/`.
+
+```sql
+ALTER TABLE "ManagedSavingsHolding" ADD COLUMN "publicFundId" TEXT;
+CREATE INDEX "ManagedSavingsHolding_publicFundId_idx" ON "ManagedSavingsHolding"("publicFundId");
+ALTER TABLE "ManagedSavingsHolding" ADD CONSTRAINT "ManagedSavingsHolding_publicFundId_fkey"
+  FOREIGN KEY ("publicFundId") REFERENCES "PublicFund"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+```
+
+The link is set only via the user-confirmed `linkManagedSavingsHoldingToPublicFund` server action (never automatically) and cleared via `unlinkManagedSavingsHoldingFromPublicFund`. `onDelete: SetNull` means deleting a `PublicFund` record never deletes or archives the personal holding — only clears the link. `officialFundId` is unrelated and untouched by this phase.
+
+When linked, `serializeHolding` populates `linkedPublicFund` with identity and the latest public return metrics (`latestMonthlyReturn`, `latestYtdReturn`, `latestAnnualized3YrReturn`, `latestAnnualized5YrReturn`). The `getEffectiveAnnualReturn` helper returns `latestAnnualized5YrReturn` from the linked fund when non-null, falling back to the holding's own `trackPerformance.last5Years`. This value is used by `projectSimulations` as a projection assumption — it is a public fund-level figure, not the user's personal realized return.
+
 ## Important Notes
 
 Do not assume public PensionNet/GemelNet data includes the user's personal balance.
 Public data usually provides fund-level returns and metadata only.
 
-`PublicFund` and `FundReturn` schema is implemented as of Phase 2C-1. Live Data.gov.il sync (Phase 2C-2, see `Context/sync-workflows.md`) is implemented and populates these tables for current GemelNet/PensionNet resources. Phase 2C-3A adds a local-DB-only search/ranking layer that reads `PublicFund`/`FundReturn` (no schema changes). Matching/linking to `ManagedSavingsHolding` (Phase 2C-3) is not yet implemented — no FK/relation exists yet, and no schema changes were needed for Phase 2C-2 or Phase 2C-3A.
+`PublicFund` and `FundReturn` schema is implemented as of Phase 2C-1. Live Data.gov.il sync (Phase 2C-2, see `Context/sync-workflows.md`) is implemented and populates these tables for current GemelNet/PensionNet resources. Phase 2C-3A adds a local-DB-only search/ranking layer that reads `PublicFund`/`FundReturn` (no schema changes). Phase 2C-3B adds the user-confirmed `ManagedSavingsHolding.publicFundId` link (FK to `PublicFund`) plus link/unlink server actions and a matching UI — the link is identity-only (no AUM, no full `FundReturn` history).
 
-Public track performance on the Managed Savings page remains mock/fallback data until Phase 2C-2/2C-3 replace it.
+Public track performance on the Managed Savings page remains mock/fallback data — Phase 2C-3B does not change it. Replacement is planned for Phase 2C-4.

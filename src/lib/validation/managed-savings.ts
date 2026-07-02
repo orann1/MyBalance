@@ -43,12 +43,12 @@ const baseFields = {
 export const CreateManagedSavingsSchema = z.object(baseFields);
 
 export const UpdateManagedSavingsSchema = z.object({
-  id: z.string().cuid(),
+  id: z.string().min(1),
   ...baseFields,
 });
 
 export const ArchiveManagedSavingsSchema = z.object({
-  id: z.string().cuid(),
+  id: z.string().min(1),
 });
 
 export type CreateManagedSavingsInput = z.infer<

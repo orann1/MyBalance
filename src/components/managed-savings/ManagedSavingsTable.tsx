@@ -8,6 +8,7 @@ import { formatCurrency, formatPercent } from "@/lib/locale/formatters";
 import { ExpandedManagedSavingsRow } from "./ExpandedManagedSavingsRow";
 import {
   projectSimulations,
+  getEffectiveAnnualReturn,
   type ManagedSavingsInvestment,
 } from "@/lib/mock/managed-savings-data";
 
@@ -205,7 +206,7 @@ export function ManagedSavingsTable({
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
                     <span className="font-mono text-sm text-green-600 font-semibold">
-                      {formatPercent(investment.trackPerformance.last5Years)}
+                      {formatPercent(getEffectiveAnnualReturn(investment))}
                     </span>
                   </td>
                   <td className="h-14 px-4 py-3 text-end border-e border-border/15">
@@ -248,7 +249,9 @@ export function ManagedSavingsTable({
                 {expandedId === investment.id && (
                   <tr>
                     <td colSpan={15} className="p-0">
-                      <ExpandedManagedSavingsRow investment={investment} />
+                      <ExpandedManagedSavingsRow
+                        investment={investment}
+                      />
                     </td>
                   </tr>
                 )}

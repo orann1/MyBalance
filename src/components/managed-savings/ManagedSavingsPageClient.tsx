@@ -70,6 +70,13 @@ export function ManagedSavingsPageClient({
     router.refresh();
   };
 
+  const handleInvestmentUpdate = (holding: ManagedSavingsInvestment) => {
+    setInvestments((prev) =>
+      prev.map((inv) => (inv.id === holding.id ? holding : inv))
+    );
+    router.refresh();
+  };
+
   return (
     <div className="space-y-8 pb-8">
       {/* Page Header */}
@@ -189,6 +196,7 @@ export function ManagedSavingsPageClient({
           onClose={() => setEditingInvestment(null)}
           onSaveSuccess={handleEditSuccess}
           onDeleteRequest={handleDeleteRequest}
+          onInvestmentUpdate={handleInvestmentUpdate}
         />
       )}
 

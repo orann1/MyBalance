@@ -2,6 +2,7 @@ import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { getDevUserId } from "@/lib/managed-savings/dev-user";
 import { serializeHolding } from "@/lib/managed-savings/serializers";
+import { getLatestFundReturnSummaries } from "@/lib/public-funds/latest-fund-returns";
 import type { ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
 
 // TODO: Replace with `managed-savings:user:${userId}` when Auth.js is introduced.
@@ -18,8 +19,20 @@ async function fetchHoldingsForDevUser(): Promise<ManagedSavingsInvestment[]> {
       status: { not: "archived" },
     },
     orderBy: { createdAt: "asc" },
+    include: { publicFund: true },
   });
-  return records.map(serializeHolding);
+
+  const publicFundIds = records
+    .map((record) => record.publicFund?.id)
+    .filter((id): id is string => Boolean(id));
+  const latestSummaries = await getLatestFundReturnSummaries(publicFundIds);
+
+  return records.map((record) =>
+    serializeHolding(
+      record,
+      record.publicFund ? latestSummaries.get(record.publicFund.id) ?? null : null
+    )
+  );
 }
 
 // Cached version — server-side cache keyed by a stable tag.

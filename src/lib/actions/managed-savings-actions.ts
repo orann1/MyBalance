@@ -6,6 +6,7 @@ import { getDevUserId } from "@/lib/managed-savings/dev-user";
 import { toMinorUnits, percentToBps } from "@/lib/financial/units";
 import { MANAGED_SAVINGS_CACHE_TAG } from "@/lib/data/managed-savings";
 import { serializeHolding } from "@/lib/managed-savings/serializers";
+import { getLatestFundReturnSummaries } from "@/lib/public-funds/latest-fund-returns";
 import type { ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
 import {
   CreateManagedSavingsSchema,
@@ -54,9 +55,11 @@ export async function createManagedSavingsHolding(
         status: "active",
         ...toDbFields(parsed.data),
       },
+      include: { publicFund: true },
     });
     revalidateTag(MANAGED_SAVINGS_CACHE_TAG, {});
-    return { ok: true, holding: serializeHolding(record) };
+    // A newly created holding is never linked yet — no FundReturn lookup needed.
+    return { ok: true, holding: serializeHolding(record, null) };
   } catch {
     return { ok: false, error: "create_failed" };
   }
@@ -83,10 +86,22 @@ export async function updateManagedSavingsHolding(
 
     const record = await prisma.managedSavingsHolding.update({
       where: { id: parsed.data.id },
+      // publicFundId is intentionally not in toDbFields — edit/add does not
+      // touch the public fund link; linking/unlinking is a separate action.
       data: toDbFields(parsed.data),
+      include: { publicFund: true },
     });
+    const latestSummaries = record.publicFund
+      ? await getLatestFundReturnSummaries([record.publicFund.id])
+      : new Map();
     revalidateTag(MANAGED_SAVINGS_CACHE_TAG, {});
-    return { ok: true, holding: serializeHolding(record) };
+    return {
+      ok: true,
+      holding: serializeHolding(
+        record,
+        record.publicFund ? latestSummaries.get(record.publicFund.id) ?? null : null
+      ),
+    };
   } catch {
     return { ok: false, error: "update_failed" };
   }

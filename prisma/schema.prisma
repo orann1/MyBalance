@@ -103,8 +103,15 @@ model ManagedSavingsHolding {
   managingCompany String?
   trackName       String?
 
-  // Optional: future Data.gov.il / GemelNet / PensionNet fund matching
+  // Optional: raw/official fund identifier as entered by the user — unrelated
+  // to the publicFundId link below. Never repurposed for matching.
   officialFundId String?
+
+  // Optional: internal DB link to a matched PublicFund record (Phase 2C-3B).
+  // User-confirmed only — never auto-linked. SetNull on PublicFund deletion
+  // so a personal holding is never deleted as a side effect.
+  publicFundId String?
+  publicFund   PublicFund? @relation(fields: [publicFundId], references: [id], onDelete: SetNull)
 
   valuationDate DateTime?
 
@@ -118,6 +125,7 @@ model ManagedSavingsHolding {
   @@index([userId, status])
   @@index([type])
   @@index([officialFundId])
+  @@index([publicFundId])
 }
 
 // ─── Phase 2C-1: Public Fund Data Foundation ──────────────────────────────────
@@ -154,7 +162,8 @@ model PublicFund {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  fundReturns FundReturn[]
+  fundReturns             FundReturn[]
+  managedSavingsHoldings  ManagedSavingsHolding[]
 
   @@unique([source, fundId])
   @@index([source])

@@ -602,3 +602,62 @@ Branch History:
 - Feature branch: `feature/public-fund-matching-search`
 - Merged into: `master`
 - Commit: `feat: add public fund matching search`
+
+## Phase 2C-3B — Public Fund Matching UI + Confirm Link / Unlink
+
+Status: **Completed and Verified** (2026-07-02)
+
+This phase added the user-confirmed link between `ManagedSavingsHolding` and `PublicFund`, the link/change/unlink management surface in `EditManagedFundModal`, a read-only public fund returns summary in `ExpandedManagedSavingsRow`, linked 5Y return as a projection assumption, and a full visual redesign of the Add/Edit modals with scrollbar polish.
+
+Completed:
+- **Prisma schema change:** `ManagedSavingsHolding.publicFundId String?` — nullable FK to `PublicFund`, `onDelete: SetNull`, indexed. `PublicFund.managedSavingsHoldings` reverse relation added. `officialFundId` unchanged and unrelated.
+- **Migration:** `prisma/migrations/20260630142325_add_public_fund_linking_to_managed_savings/` — adds the FK column, index, and foreign key constraint.
+- **Server actions** (`src/lib/actions/public-fund-linking-actions.ts`): `linkManagedSavingsHoldingToPublicFund` and `unlinkManagedSavingsHoldingFromPublicFund`. Zod-validated (`z.string().min(1)`, not `cuid()` — seeded IDs like "hist-001" fail cuid regex; ownership check is the security gate), ownership-checked, reject archived holdings, verify `PublicFund` exists, update `publicFundId` only.
+- **Data layer additions:** `LinkedPublicFund` type extended with return metrics (`latestMonthlyReturn`, `latestYtdReturn`, `latestAnnualized3YrReturn`, `latestAnnualized5YrReturn`). `getEffectiveAnnualReturn(investment)` helper: returns linked fund `latestAnnualized5YrReturn` when non-null, else `investment.trackPerformance.last5Years`. `projectSimulations` uses `getEffectiveAnnualReturn` — projections now reflect live public data when a fund is linked. Batch `getLatestReportPeriodsByPublicFundIds` prevents N+1 queries.
+- **`PublicFundMatchModal`** (`src/components/managed-savings/PublicFundMatchModal.tsx`): local-DB-only search via Phase 2C-3A `searchPublicFundsForMatchingAction`, explicit confirm button required to link — no auto-linking. Z-index `z-[70]` renders above the Edit modal's `z-50`.
+- **`EditManagedFundModal` as single management surface:** link/change/unlink controls live here. Linked state: source badge + change/unlink buttons + labelled metadata inset (`Fund name: X | Managing company: Y | Fund number: Z | Last fund update: W`). Unlinked state: "Link to public fund data" button.
+- **`ExpandedManagedSavingsRow` as read-only summary:** unified green card when linked (KPI return metric cells + divider + labelled metadata row with visible `label: value` pairs + disclaimer); compact amber warning only when unlinked.
+- **Add/Edit modal visual redesign:** `bg-slate-50` outer container, `bg-white border-b border-slate-200` header, `rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden` section cards, `bg-slate-100/70 border-b border-slate-200` header bands, `rounded-full bg-white border border-slate-200` icon circles, `h-11 border-slate-300 bg-white` inputs, `font-bold text-slate-700 uppercase tracking-wide` labels, `bg-white shadow-[0_-2px_10px_rgba(0,0,0,0.06)]` sticky footer.
+- **Scrollbar polish:** `modal-scrollbar` `@utility` in `globals.css` — 6px WebKit scrollbar with `slate-300/400` thumb, rounded, `scrollbar-width: thin` Firefox support. Applied to both modals' scroll container.
+- **i18n:** `managedSavings.publicFundLinking` namespace (and nested `sourceLabels`, `linkedSummary`, `modal`, `linkedPerformance`) in both `he.json` and `en.json`. `linkedSummary.fundId` = "Fund number" / "מספר קרן"; `linkedSummary.latestReportPeriod` = "Last fund update" / "עדכון אחרון". No hardcoded UI text.
+
+Product Owner browser QA:
+- Link/unlink working correctly.
+- Regular edit (add/update holding) working correctly.
+- Linked 5Y return displayed in table column and projection assumptions updated.
+- Compact unlinked warning shown correctly in expanded row.
+- Linked public fund metadata displayed in one labelled horizontal row.
+- Add/Edit modal visual redesign accepted.
+- Modal scrollbar polish accepted.
+
+Automated checks (final):
+- `npm run db:validate` — passed.
+- `npm run db:generate` — passed.
+- `npm run db:migrate:local` — passed (already in sync).
+- `npm run db:seed:local` — passed (idempotent).
+- `npm run lint` — passed, 0 errors/warnings.
+- `npx tsc --noEmit` — passed.
+- `npm run build` — passed.
+
+Product boundary confirmed:
+- Public returns are fund-level only — not personal realized returns.
+- Linked `latestAnnualized5YrReturn` is a projection assumption only, not a claimed personal return.
+- AUM not displayed anywhere in the UI.
+- No financial advice wording added.
+- No Data.gov.il calls in this phase (matching UI uses local DB via Phase 2C-3A backend).
+- No Phase 2C-4 implementation (public performance display replacement not started).
+
+Known Deferred Items (carried forward):
+- Phase 2C-4: full public performance display replacement / richer analytics not implemented.
+- Scheduled sync not implemented.
+- Admin sync UI not implemented.
+- Historical resource backfill not default.
+- Product type inference unresolved (stays nullable/unknown).
+- AUM not displayed (units not approved).
+- Auth.js/multi-user support future scope.
+- Custom horizon projection edge case (years 2–4, 6–9, 11–14 return 0 in the Phase 2A model) remains deferred.
+
+Branch History:
+- Feature branch: `feature/public-fund-linking-ui`
+- Merged into: `master`
+- Commit: `feat: link managed savings to public funds`
