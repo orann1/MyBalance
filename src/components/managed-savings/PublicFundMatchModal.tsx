@@ -16,7 +16,12 @@ interface PublicFundMatchModalProps {
   onLinkSuccess: (holding: ManagedSavingsInvestment) => void;
 }
 
-type SourceFilter = "all" | "gemelnet" | "pensionnet";
+// Managed Savings products (Keren Hishtalmut, Kupat Gemel, Gemel LeHashkaa,
+// Savings Policy) are non-pension. This modal only ever searches GemelNet —
+// PensionNet is a separate, pension-related data source and is intentionally
+// not selectable here. The backend (searchPublicFundsForMatching) still
+// supports both sources for other future screens.
+const MANAGED_SAVINGS_SOURCE = "gemelnet" as const;
 
 function buildInitialQuery(investment: ManagedSavingsInvestment): string {
   return [investment.track, investment.managingCompany].filter(Boolean).join(" ").trim();
@@ -32,8 +37,6 @@ export function PublicFundMatchModal({
   const tSource = useTranslations("managedSavings.publicFundLinking.sourceLabels");
 
   const [query, setQuery] = useState(() => buildInitialQuery(investment));
-  // Non-pension managed savings products generally come from GemelNet.
-  const [sourceFilter, setSourceFilter] = useState<SourceFilter>("gemelnet");
   const [candidates, setCandidates] = useState<PublicFundMatchCandidate[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState(false);
@@ -50,7 +53,7 @@ export function PublicFundMatchModal({
     startSearch(async () => {
       const result = await searchPublicFundsForMatchingAction({
         query: query || undefined,
-        source: sourceFilter === "all" ? undefined : sourceFilter,
+        source: MANAGED_SAVINGS_SOURCE,
         limit: 10,
       });
       setHasSearched(true);
@@ -83,8 +86,8 @@ export function PublicFundMatchModal({
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 backdrop-blur-md modal-backdrop-in">
       <div className="rounded-3xl bg-white border border-border/40 shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto modal-panel-in">
-        {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-asset/20 bg-gradient-to-r from-asset/15 via-asset/10 to-transparent px-6 py-6">
+        {/* Header — fully opaque so scrolling results never show through */}
+        <div className="sticky top-0 z-20 border-b border-border/60 bg-white px-6 py-6 shadow-sm">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-3 mb-1">
@@ -106,7 +109,7 @@ export function PublicFundMatchModal({
         </div>
 
         <div className="p-6 space-y-5">
-          {/* Search controls */}
+          {/* Search controls — GemelNet only, no source selector (Managed Savings is non-pension) */}
           <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
@@ -116,15 +119,6 @@ export function PublicFundMatchModal({
               placeholder={t("searchPlaceholder")}
               className="flex-1 px-3 py-2.5 text-sm rounded-lg border border-border/50 bg-white/80 hover:bg-white focus:outline-none focus:ring-2 focus:ring-asset focus:border-transparent transition-colors"
             />
-            <select
-              value={sourceFilter}
-              onChange={(e) => setSourceFilter(e.target.value as SourceFilter)}
-              className="px-3 py-2.5 text-sm rounded-lg border border-border/50 bg-white/80 hover:bg-white focus:outline-none focus:ring-2 focus:ring-asset focus:border-transparent transition-colors"
-            >
-              <option value="all">{t("sourceAll")}</option>
-              <option value="gemelnet">{tSource("gemelnet")}</option>
-              <option value="pensionnet">{tSource("pensionnet")}</option>
-            </select>
             <button
               onClick={handleSearch}
               disabled={isSearching}
@@ -141,6 +135,10 @@ export function PublicFundMatchModal({
 
           {/* Disclaimer */}
           <div className="rounded-xl bg-blue-50/60 border border-blue-200/40 p-4 space-y-1.5">
+            <div className="flex items-start gap-2">
+              <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-blue-600" />
+              <p className="text-xs text-blue-900">{t("gemelnetOnlyNote")}</p>
+            </div>
             <div className="flex items-start gap-2">
               <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-blue-600" />
               <p className="text-xs text-blue-900">{t("note1")}</p>

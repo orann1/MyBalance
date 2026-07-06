@@ -371,7 +371,7 @@
         "subtitle": "Search for a public fund to link to this holding",
         "searchPlaceholder": "Search by fund name or managing company",
         "searchButton": "Search public fund",
-        "sourceAll": "All",
+        "gemelnetOnlyNote": "Search uses the public GemelNet dataset. It may include Keren Hishtalmut, Kupat Gemel, and Gemel LeHashkaa funds where available.",
         "loading": "Searching...",
         "emptyResults": "No matching funds found",
         "errorSearch": "Search failed. Please try again.",

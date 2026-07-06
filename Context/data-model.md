@@ -399,7 +399,24 @@ ALTER TABLE "ManagedSavingsHolding" ADD CONSTRAINT "ManagedSavingsHolding_public
 
 The link is set only via the user-confirmed `linkManagedSavingsHoldingToPublicFund` server action (never automatically) and cleared via `unlinkManagedSavingsHoldingFromPublicFund`. `onDelete: SetNull` means deleting a `PublicFund` record never deletes or archives the personal holding — only clears the link. `officialFundId` is unrelated and untouched by this phase.
 
-When linked, `serializeHolding` populates `linkedPublicFund` with identity and the latest public return metrics (`latestMonthlyReturn`, `latestYtdReturn`, `latestAnnualized3YrReturn`, `latestAnnualized5YrReturn`). The `getEffectiveAnnualReturn` helper returns `latestAnnualized5YrReturn` from the linked fund when non-null, falling back to the holding's own `trackPerformance.last5Years`. This value is used by `projectSimulations` as a projection assumption — it is a public fund-level figure, not the user's personal realized return.
+When linked, `serializeHolding` populates `linkedPublicFund` with identity and the latest public return metrics (`latestMonthlyReturn`, `latestYtdReturn`, `latestAnnualized3YrReturn`, `latestAnnualized5YrReturn`). The `getEffectiveAnnualReturn` helper returns `latestAnnualized5YrReturn` from the linked fund when non-null, falling back to the holding's own `trackPerformance.last5Years`. This value is used by `projectSimulations` as a projection assumption — it is a public fund-level figure, not the user's personal realized return. `latestAnnualized5YrReturn` must never be relabeled or presented as the user's personal return in any future UI work.
+
+`ExpandedManagedSavingsRow` already renders these linked KPI metrics directly (monthly/YTD/3Y/5Y annualized return, plus a metadata row and disclaimer) as of Phase 2C-3B — this is real DB-backed data, not mock/fallback. AUM (`FundReturn.assetsUnderManagement`/`assetsUnderManagementRaw`) is never included in `linkedPublicFund` and must not be displayed anywhere in the UI.
+
+### Phase 2C-4A Implementation Notes (2026-07-05)
+
+Query-hardening only — no schema/migration change. The latest-`FundReturn`-per-fund lookup (`getLatestFundReturnSummaries` in `src/lib/public-funds/latest-fund-returns.ts`) previously fetched every historical `FundReturn` row for a set of `publicFundId`s and reduced them to the latest row per fund in application code. This is replaced with a single parameterized raw SQL query using PostgreSQL's `DISTINCT ON`:
+
+```sql
+SELECT DISTINCT ON ("publicFundId")
+  "publicFundId", "reportPeriod", "monthlyReturn", "ytdReturn",
+  "annualized3YrReturn", "annualized5YrReturn"
+FROM "FundReturn"
+WHERE "publicFundId" = ANY($1::text[])
+ORDER BY "publicFundId", "reportPeriod" DESC
+```
+
+Built via Prisma's `Prisma.sql` tagged helper (parameterized, no string interpolation) and executed with `prisma.$queryRaw`. This returns exactly one row per requested fund id regardless of how many months of history exist for that fund — the existing `@@unique([publicFundId, reportPeriod])` composite index already serves this query efficiently as an index-driven scan, so no new index was required. `searchPublicFundsForMatching` (`src/lib/public-funds/search-public-funds.ts`) now reuses this same hardened lookup for its candidate-enrichment step instead of its own separate fetch-all-then-reduce query. Output shapes (`LatestFundReturnSummary`, `PublicFundMatchCandidate`) are unchanged; AUM fields are still never selected or exposed by this query.
 
 ## Important Notes
 
@@ -408,4 +425,4 @@ Public data usually provides fund-level returns and metadata only.
 
 `PublicFund` and `FundReturn` schema is implemented as of Phase 2C-1. Live Data.gov.il sync (Phase 2C-2, see `Context/sync-workflows.md`) is implemented and populates these tables for current GemelNet/PensionNet resources. Phase 2C-3A adds a local-DB-only search/ranking layer that reads `PublicFund`/`FundReturn` (no schema changes). Phase 2C-3B adds the user-confirmed `ManagedSavingsHolding.publicFundId` link (FK to `PublicFund`) plus link/unlink server actions and a matching UI — the link is identity-only (no AUM, no full `FundReturn` history).
 
-Public track performance on the Managed Savings page remains mock/fallback data — Phase 2C-3B does not change it. Replacement is planned for Phase 2C-4.
+Public track performance on the Managed Savings page for **linked** holdings is real DB-backed `FundReturn` data as of Phase 2C-3B, rendered directly in `ExpandedManagedSavingsRow` — this is not mock/fallback. **Unlinked** holdings show a compact warning with no performance numbers displayed. The mock `trackPerformance` object survives only as a calculation fallback inside `getEffectiveAnnualReturn` (feeding the table 5Y column and `projectSimulations`) when a holding is unlinked, or linked to a fund with a null `latestAnnualized5YrReturn`. Phase 2C-4A (2026-07-05) hardened the underlying latest-return query layer and corrected this documentation; it made no UI changes.

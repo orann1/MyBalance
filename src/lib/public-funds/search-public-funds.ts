@@ -2,6 +2,7 @@ import type { Prisma, PublicFund } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { trimAndCollapseWhitespace } from "./matching-normalization";
 import { scorePublicFundCandidate } from "./matching";
+import { getLatestFundReturnSummaries } from "./latest-fund-returns";
 import {
   DEFAULT_SEARCH_LIMIT,
   MAX_CANDIDATE_POOL,
@@ -9,11 +10,6 @@ import {
   type PublicFundMatchCandidate,
   type PublicFundSearchInput,
 } from "./search-types";
-
-function toDecimalNumber(value: Prisma.Decimal | null | undefined): number | null {
-  if (value === null || value === undefined) return null;
-  return Number(value);
-}
 
 function clampLimit(limit: number | undefined): number {
   if (!limit || !Number.isFinite(limit) || limit <= 0) return DEFAULT_SEARCH_LIMIT;
@@ -99,24 +95,15 @@ export async function searchPublicFundsForMatching(
     return [];
   }
 
+  // Batched, bounded lookup — exactly one (latest) FundReturn row per fund,
+  // regardless of how many months of history each candidate fund has.
   const fundIds = Array.from(candidateFunds.keys());
-  const latestReturns = await prisma.fundReturn.findMany({
-    where: { publicFundId: { in: fundIds } },
-    orderBy: { reportPeriod: "desc" },
-  });
-
-  // Keep only the first (latest) FundReturn row encountered per fund.
-  const latestReturnByFundId = new Map<string, (typeof latestReturns)[number]>();
-  for (const fundReturn of latestReturns) {
-    if (!latestReturnByFundId.has(fundReturn.publicFundId)) {
-      latestReturnByFundId.set(fundReturn.publicFundId, fundReturn);
-    }
-  }
+  const latestSummaries = await getLatestFundReturnSummaries(fundIds);
 
   const candidates: PublicFundMatchCandidate[] = [];
 
   for (const fund of candidateFunds.values()) {
-    const latestReturn = latestReturnByFundId.get(fund.id) ?? null;
+    const latestSummary = latestSummaries.get(fund.id) ?? null;
 
     const { score, reasons } = scorePublicFundCandidate(
       fund,
@@ -127,7 +114,7 @@ export async function searchPublicFundsForMatching(
         managingCompany: input.managingCompany || undefined,
         fundId: input.fundId || undefined,
       },
-      latestReturn !== null,
+      latestSummary !== null,
     );
 
     candidates.push({
@@ -142,11 +129,11 @@ export async function searchPublicFundsForMatching(
       fundClassification: fund.fundClassification,
       specialization: fund.specialization,
       subSpecialization: fund.subSpecialization,
-      latestReportPeriod: latestReturn?.reportPeriod ?? null,
-      latestMonthlyReturn: toDecimalNumber(latestReturn?.monthlyReturn),
-      latestYtdReturn: toDecimalNumber(latestReturn?.ytdReturn),
-      latestAnnualized3YrReturn: toDecimalNumber(latestReturn?.annualized3YrReturn),
-      latestAnnualized5YrReturn: toDecimalNumber(latestReturn?.annualized5YrReturn),
+      latestReportPeriod: latestSummary?.reportPeriod ?? null,
+      latestMonthlyReturn: latestSummary?.monthlyReturn ?? null,
+      latestYtdReturn: latestSummary?.ytdReturn ?? null,
+      latestAnnualized3YrReturn: latestSummary?.annualized3YrReturn ?? null,
+      latestAnnualized5YrReturn: latestSummary?.annualized5YrReturn ?? null,
       matchScore: score,
       matchReasonLabels: reasons,
     });

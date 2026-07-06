@@ -661,3 +661,63 @@ Branch History:
 - Feature branch: `feature/public-fund-linking-ui`
 - Merged into: `master`
 - Commit: `feat: link managed savings to public funds`
+
+## Phase 2C-4A — Fund Return Query Hardening + Documentation Correction
+
+Status: **COMPLETED AND VERIFIED** (2026-07-06). Product Owner browser QA approved. Committed and merged into `master`.
+
+This phase followed a Phase 2C-4A Planning + Query Audit (audit-only, no code changes) that found the linked-holding public performance display was already fully delivered in Phase 2C-3B (real DB-backed KPIs, not mock/fallback), and that the underlying "latest FundReturn per fund" lookup used an unbounded fetch-all-then-reduce-in-JS pattern that would not scale if historical backfill or many more linked holdings were added later.
+
+Completed:
+- **`getLatestFundReturnSummaries`** (`src/lib/public-funds/latest-fund-returns.ts`): replaced the `findMany({ orderBy: reportPeriod desc })` + JS-reduce pattern with a single parameterized raw SQL query using PostgreSQL `DISTINCT ON ("publicFundId") ... ORDER BY "publicFundId", "reportPeriod" DESC`, built via `Prisma.sql` (no string interpolation) and executed with `prisma.$queryRaw`. Returns exactly one row per requested fund id regardless of history depth. Empty input short-circuits to an empty `Map`. Output shape and Decimal-to-number conversion behavior unchanged.
+- **`searchPublicFundsForMatching`** (`src/lib/public-funds/search-public-funds.ts`): candidate-enrichment step now reuses the hardened `getLatestFundReturnSummaries` instead of its own separate fetch-all-then-reduce query. Removed the now-unused `toDecimalNumber` helper. `PublicFundMatchCandidate` output shape unchanged.
+- **No schema/migration changes** — the existing `@@unique([publicFundId, reportPeriod])` composite index already serves the `DISTINCT ON` query.
+- **Documentation correction** — `Context/current-feature.md`, `Context/data-model.md`, `Context/Features/pension-gemel-sync-feature-spec.md`, and `Context/Algorithms/pension-return-calculation.md` updated to remove the stale claim that the linked public performance display is still mock/fallback; clarified it was delivered in Phase 2C-3B and that only the calculation fallback for unlinked holdings remains mock-driven.
+
+**Follow-up QA fix (same branch, before merge):** Product Owner browser QA on `PublicFundMatchModal` found two issues, fixed on the same branch:
+1. **Header/scroll overlap** — the modal header used a translucent gradient background (`bg-gradient-to-r from-asset/15 via-asset/10 to-transparent`), letting scrolled result rows show through it. Replaced with a fully opaque `bg-white border-b border-border/60 shadow-sm`, raised to `z-20`. No change to header height, title, subtitle, or close button.
+2. **PensionNet exposed in a non-pension modal** — the modal previously offered a "All / GemelNet / PensionNet" source dropdown. Since Managed Savings covers only non-pension products (Keren Hishtalmut, Kupat Gemel, Gemel LeHashkaa, Savings Policy) and GemelNet/PensionNet are data sources rather than product types, this incorrectly allowed selecting a pension-specific source from a non-pension page. The dropdown was removed; the modal now always searches `source: "gemelnet"` internally via a `MANAGED_SAVINGS_SOURCE` constant. New helper copy (`modal.gemelnetOnlyNote` in `he.json`/`en.json`) clarifies the search covers the public GemelNet dataset and may include Keren Hishtalmut/Kupat Gemel/Gemel LeHashkaa where available — no claim that all product types are guaranteed present, and no product-type filter was added (`PublicFund.productType` inference remains unresolved/nullable). The now-unused `modal.sourceAll` i18n key was removed from both message files. **The backend (`searchPublicFundsForMatching`, `searchPublicFundsForMatchingAction`, `PublicFundSearchSchema`) still fully supports `source: "pensionnet"`** for any other future screen — only this modal's UI was restricted to GemelNet.
+
+Verified via a headless-browser (Playwright, ad hoc — not a project dependency) run against both `/managed-savings` (Hebrew RTL) and `/en/managed-savings` (English LTR): zero `<select>` elements in the modal, all candidate badges show GemelNet only (11 GemelNet / 0 PensionNet badges observed), scrolled screenshots confirm no header overlap in either locale, zero console errors, linked KPI card and unlinked amber warning both render unchanged, "Link this fund" confirm button present and enabled.
+
+Read-only local DB verification performed:
+- `getLatestFundReturnSummaries` for the 2 currently linked holdings returned exactly 1 row per fund, matching a manual `findFirst` cross-check.
+- Empty fund-id array returned an empty map with no query executed.
+- `searchPublicFundsForMatching` search still returned candidates enriched with latest return metrics; no `assetsUnderManagement` key present on any candidate.
+
+Automated checks (final, before merge):
+- `npm run db:validate` — passed.
+- `npm run db:generate` — passed.
+- `npx tsc --noEmit` — passed.
+- `npm run lint` — passed, 0 errors/warnings.
+- `npm run build` — passed (pre-existing unrelated `ENVIRONMENT_FALLBACK` warning only).
+
+Product Owner browser QA (final approval):
+- Linked KPI card still works and looks unchanged.
+- Unlinked warning still works.
+- `PublicFundMatchModal` no longer has scroll/header overlap.
+- `PublicFundMatchModal` no longer exposes a PensionNet selector; Managed Savings matching is GemelNet-only.
+- Search still works.
+- No visual or locale regression observed.
+
+Product boundary confirmed:
+- No AUM serialized or displayed.
+- Linked `latestAnnualized5YrReturn` remains a projection assumption only, never a personal return.
+- No advisory wording added.
+- No Data.gov.il calls, no new sync logic.
+- PensionNet backend/schema support was not removed globally.
+
+Known Deferred Items (carried forward):
+- No chart or monthly history table (Option A KPI-only display remains the approved MVP).
+- No AUM display.
+- No `avgAnnualManagementFee`/`avgDepositFee` UI.
+- No personal realized return calculation.
+- No product type inference.
+- Scheduled sync, admin sync UI, historical resource backfill still future scope.
+- Auth.js/multi-user support still future scope.
+- Custom horizon projection edge case (years 2–4, 6–9, 11–14 return 0 in the Phase 2A model) remains deferred.
+
+Branch History:
+- Feature branch: `feature/fund-return-query-hardening`
+- Merged into: `master`
+- Commit: `perf: harden public fund return lookups`
