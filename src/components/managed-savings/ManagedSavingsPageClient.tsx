@@ -1,15 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Info, Plus } from "lucide-react";
+import { Info, Plus, CheckCircle2, XCircle } from "lucide-react";
 import { ManagedSavingsSummaryCards } from "./ManagedSavingsSummaryCards";
+import { ManagedSavingsBreakdownByType } from "./ManagedSavingsBreakdownByType";
 import { ManagedSavingsTable } from "./ManagedSavingsTable";
 import { ManagedSavingsSummaryTable } from "./ManagedSavingsSummaryTable";
 import { EditManagedFundModal } from "./EditManagedFundModal";
 import { AddManagedFundModal } from "./AddManagedFundModal";
 import { DeleteHoldingConfirmModal } from "./DeleteHoldingConfirmModal";
+import { reorderManagedSavingsHoldings } from "@/lib/actions/managed-savings-actions";
+import { calculateManagedSavingsSummary } from "@/lib/managed-savings/summary";
+import { cn } from "@/lib/utils";
 import {
   calculateTotalSummary,
   type ManagedSavingsInvestment,
@@ -23,27 +27,33 @@ export function ManagedSavingsPageClient({
   initialInvestments,
 }: ManagedSavingsPageClientProps) {
   const t = useTranslations("managedSavings");
+  const tOrdering = useTranslations("managedSavings.ordering");
   const router = useRouter();
-  const [customYears, setCustomYears] = useState(20);
+  // Default custom horizon is 15 years — matches the table's dynamic
+  // projection column default (Product QA fix round, 2026-07-06).
+  const [customYears, setCustomYears] = useState(15);
   const [investments, setInvestments] = useState(initialInvestments);
   const [editingInvestment, setEditingInvestment] =
     useState<ManagedSavingsInvestment | null>(null);
   const [deletingInvestment, setDeletingInvestment] =
     useState<ManagedSavingsInvestment | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [reorderStatus, setReorderStatus] = useState<"saved" | "failed" | null>(null);
+  const reorderStatusTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const summary = calculateManagedSavingsSummary(investments);
 
   const totalCurrentValue = investments.reduce(
     (sum, inv) => sum + inv.currentBalance,
     0
   );
-  const totalMonthlyContributions = investments.reduce(
-    (sum, inv) => sum + inv.monthlyContribution,
-    0
-  );
 
+  // Top KPI row shows a clear progression over time (current -> 1Y -> 5Y ->
+  // 10Y); monthly contributions remain visible per-row and in the table
+  // totals, just not as a top colored card (Product QA final visual round).
+  const oneYearSummary = calculateTotalSummary(investments, 1);
   const fiveYearSummary = calculateTotalSummary(investments, 5);
   const tenYearSummary = calculateTotalSummary(investments, 10);
-  const customYearSummary = calculateTotalSummary(investments, customYears);
 
   const handleAddSuccess = (holding: ManagedSavingsInvestment) => {
     setInvestments((prev) => [...prev, holding]);
@@ -77,6 +87,31 @@ export function ManagedSavingsPageClient({
     router.refresh();
   };
 
+  const showReorderStatus = (status: "saved" | "failed") => {
+    if (reorderStatusTimeout.current) clearTimeout(reorderStatusTimeout.current);
+    setReorderStatus(status);
+    reorderStatusTimeout.current = setTimeout(() => setReorderStatus(null), 3000);
+  };
+
+  const handleReorder = async (orderedIds: string[]) => {
+    const previousInvestments = investments;
+    // Optimistic update: reorder the local list immediately.
+    const reordered = orderedIds
+      .map((id) => previousInvestments.find((inv) => inv.id === id))
+      .filter((inv): inv is ManagedSavingsInvestment => Boolean(inv));
+    setInvestments(reordered);
+
+    const result = await reorderManagedSavingsHoldings({ orderedIds });
+    if (result.ok) {
+      setInvestments(result.holdings);
+      showReorderStatus("saved");
+    } else {
+      // Recover from server failure by reverting to the previous order.
+      setInvestments(previousInvestments);
+      showReorderStatus("failed");
+    }
+  };
+
   return (
     <div className="space-y-8 pb-8">
       {/* Page Header */}
@@ -89,40 +124,50 @@ export function ManagedSavingsPageClient({
         </p>
       </div>
 
-      {/* Custom Horizon Selector */}
-      <div className="flex items-center gap-4 bg-card rounded-2xl p-4 border border-border/40 shadow-card">
-        <label className="text-sm font-semibold text-foreground">
-          {t("customHorizon")}
-        </label>
-        <input
-          type="number"
-          min="1"
-          max="50"
-          value={customYears}
-          onChange={(e) =>
-            setCustomYears(Math.max(1, Number(e.target.value)))
-          }
-          className="w-24 px-3 py-2 rounded-lg border border-border bg-background text-sm font-mono font-semibold focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-asset"
-        />
-        <span className="text-sm font-medium text-muted-foreground">
-          {t("years")}
-        </span>
-      </div>
-
-      {/* Summary Cards */}
+      {/* Summary Cards — compact, top-of-page KPIs only. The custom-horizon
+          control now lives next to the table itself (see ManagedSavingsTable),
+          not as a disconnected strip here. */}
       <ManagedSavingsSummaryCards
         totalCurrentValue={totalCurrentValue}
-        totalMonthlyContributions={totalMonthlyContributions}
+        projectedIn1Year={oneYearSummary.total}
         projectedIn5Years={fiveYearSummary.total}
         projectedIn10Years={tenYearSummary.total}
-        projectedInCustomYears={customYearSummary.total}
-        customYears={customYears}
       />
+
+      {/* Reorder save status — fixed near the top of the viewport so it
+          stays clearly visible even if the user has scrolled down
+          (Product QA final fix round). Larger and more prominent than the
+          previous small inline pill. */}
+      {reorderStatus && (
+        <div className="fixed top-4 inset-x-0 z-[100] flex justify-center px-4 pointer-events-none">
+          <div
+            role="status"
+            aria-live="polite"
+            className={cn(
+              "pointer-events-auto flex items-center gap-2.5 rounded-2xl border px-5 py-3 shadow-lg text-sm md:text-base font-semibold",
+              reorderStatus === "saved"
+                ? "bg-green-50 border-green-200 text-green-800"
+                : "bg-red-50 border-red-200 text-red-800"
+            )}
+          >
+            {reorderStatus === "saved" ? (
+              <CheckCircle2 className="h-5 w-5 shrink-0 text-green-600" />
+            ) : (
+              <XCircle className="h-5 w-5 shrink-0 text-red-600" />
+            )}
+            {reorderStatus === "saved"
+              ? tOrdering("orderSaved")
+              : tOrdering("orderSaveFailed")}
+          </div>
+        </div>
+      )}
 
       {/* Main Investments Table */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl md:text-2xl font-bold">{t("holdingsTitle")}</h2>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl md:text-2xl font-bold">{t("holdingsTitle")}</h2>
+          </div>
           <button
             onClick={() => setShowAddModal(true)}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-asset text-white font-medium text-sm hover:bg-asset/90 transition-colors"
@@ -145,10 +190,17 @@ export function ManagedSavingsPageClient({
           <ManagedSavingsTable
             investments={investments}
             customYears={customYears}
+            onCustomYearsChange={setCustomYears}
             onEditClick={setEditingInvestment}
+            onDeleteClick={handleDeleteRequest}
+            onReorder={handleReorder}
           />
         )}
       </div>
+
+      {/* Breakdown by Product Type — moved below the main table so it no
+          longer delays the table (Product QA fix round, 2026-07-06). */}
+      <ManagedSavingsBreakdownByType summary={summary} />
 
       {/* Summary Table */}
       {investments.length > 0 && (

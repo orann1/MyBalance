@@ -9,8 +9,8 @@ import type { ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
 export const MANAGED_SAVINGS_CACHE_TAG = "managed-savings:dev-user";
 
 // Fetches active (non-archived) holdings for the dev user from the database.
-// Sorted by createdAt ascending to preserve insertion order — most intuitive for users
-// who added holdings over time and expect to see them in the order they were entered.
+// Sorted by the user-controlled displayOrder (Phase 2D-1), with createdAt asc
+// as a deterministic fallback for any rows that happen to share a displayOrder.
 async function fetchHoldingsForDevUser(): Promise<ManagedSavingsInvestment[]> {
   const userId = await getDevUserId();
   const records = await prisma.managedSavingsHolding.findMany({
@@ -18,7 +18,7 @@ async function fetchHoldingsForDevUser(): Promise<ManagedSavingsInvestment[]> {
       userId,
       status: { not: "archived" },
     },
-    orderBy: { createdAt: "asc" },
+    orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
     include: { publicFund: true },
   });
 

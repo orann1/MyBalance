@@ -151,3 +151,20 @@ export async function searchPublicFundsForMatching(
 
   return candidates.slice(0, input.limit);
 }
+
+/**
+ * Lists distinct managing companies for a given public data source, for use
+ * as lightweight search suggestions in the matching UI. Local DB only —
+ * never calls Data.gov.il. Read-only, no personal data involved.
+ */
+export async function listManagingCompanies(
+  source: PublicFund["source"],
+): Promise<string[]> {
+  const rows = await prisma.publicFund.findMany({
+    where: { source },
+    distinct: ["managingCompany"],
+    select: { managingCompany: true },
+    orderBy: { managingCompany: "asc" },
+  });
+  return rows.map((row) => row.managingCompany);
+}

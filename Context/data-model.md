@@ -107,6 +107,7 @@ Planned fields:
 - type (ManagedSavingsType enum)
 - owner (OwnerLabel enum)
 - status (HoldingStatus enum)
+- displayOrder (Int — user-controlled row order, Phase 2D-1. Lower values render first. Indexed via `@@index([userId, displayOrder])`. Backfilled from `createdAt` ascending on introduction so existing holdings did not visibly reshuffle; new holdings are appended via `max(existing active displayOrder for user) + 1`. Persisted by the `reorderManagedSavingsHoldings` server action.)
 - currentBalanceMinor (BigInt — agorot)
 - monthlyContributionMinor (BigInt — agorot)
 - currency (default: ILS)
@@ -290,6 +291,7 @@ Product type for a managed savings holding:
 - `gemel` — Kupat Gemel
 - `hashkaa` — Gemel LeHashkaa
 - `savings` — Savings Policy / managed savings
+- `other` — Private investment / bank account / anything not covered above (added Phase 2D-1, 2026-07-09, additive migration `ALTER TYPE "ManagedSavingsType" ADD VALUE 'other'`, no existing data affected). Behaves identically to any other type; may remain unlinked to a public fund.
 
 ### OwnerLabel
 
@@ -341,7 +343,7 @@ Files created:
 
 Money representation: `currentBalanceMinor` and `monthlyContributionMinor` are `BigInt` (agorot = ILS × 100).
 Fee representation: `accumulationFeeBps` and `depositFeeBps` are `Int` basis points (bps = percent × 100).
-Seed uses stable mock IDs (`hist-001`, `gemel-001`, etc.) so upsert is idempotent.
+Seed uses stable mock IDs (`hist-001`, `gemel-001`, etc.) to identify the 8 canonical holdings. **As of the Phase 2D-1 seed safety fix (2026-07-09), seeding `ManagedSavingsHolding` is create-if-missing only, not upsert** — if a canonical id already exists, it is left completely untouched (including `status`, `displayOrder`, balances, and `publicFundId`); only missing ids are created. This was changed because the previous upsert-based seed silently reset those fields on every run, which could reactivate archived holdings and overwrite manual QA edits/reordering. Re-running `db:seed:local` is safe at any time and must not be used as a QA data reset mechanism.
 
 ### Database Environments
 
@@ -418,6 +420,44 @@ ORDER BY "publicFundId", "reportPeriod" DESC
 
 Built via Prisma's `Prisma.sql` tagged helper (parameterized, no string interpolation) and executed with `prisma.$queryRaw`. This returns exactly one row per requested fund id regardless of how many months of history exist for that fund — the existing `@@unique([publicFundId, reportPeriod])` composite index already serves this query efficiently as an index-driven scan, so no new index was required. `searchPublicFundsForMatching` (`src/lib/public-funds/search-public-funds.ts`) now reuses this same hardened lookup for its candidate-enrichment step instead of its own separate fetch-all-then-reduce query. Output shapes (`LatestFundReturnSummary`, `PublicFundMatchCandidate`) are unchanged; AUM fields are still never selected or exposed by this query.
 
+## Phase 2D-1 Implementation Notes (2026-07-06)
+
+Adds `ManagedSavingsHolding.displayOrder Int @default(0)` plus a composite index `@@index([userId, displayOrder])`.
+
+Migration: `prisma/migrations/20260706125519_add_managed_savings_display_order/`.
+
+```sql
+ALTER TABLE "ManagedSavingsHolding" ADD COLUMN "displayOrder" INTEGER NOT NULL DEFAULT 0;
+
+-- Backfill: preserve today's visible order (createdAt asc, per user).
+WITH ordered AS (
+  SELECT "id", ROW_NUMBER() OVER (PARTITION BY "userId" ORDER BY "createdAt" ASC) AS rn
+  FROM "ManagedSavingsHolding"
+)
+UPDATE "ManagedSavingsHolding" AS h
+SET "displayOrder" = ordered.rn
+FROM ordered
+WHERE h."id" = ordered."id";
+
+CREATE INDEX "ManagedSavingsHolding_userId_displayOrder_idx" ON "ManagedSavingsHolding"("userId", "displayOrder");
+```
+
+`fetchHoldingsForDevUser` (`src/lib/data/managed-savings.ts`) now sorts active holdings by `[{ displayOrder: "asc" }, { createdAt: "asc" }]` (the `createdAt` clause is a deterministic tie-breaker only). `createManagedSavingsHolding` assigns new holdings `max(existing active displayOrder for the user) + 1` inside a transaction, so new holdings are always appended to the end. A new server action, `reorderManagedSavingsHoldings({ orderedIds })` (`src/lib/actions/managed-savings-actions.ts`), persists user-controlled ordering: Zod-validated (no duplicates, non-empty), ownership-checked against every submitted id, rejects the whole batch if any id is missing/foreign/archived, updates `displayOrder` transactionally, revalidates the managed savings cache tag, and returns the authoritative re-sorted active holdings.
+
+`src/lib/managed-savings/summary.ts` (new) computes the Managed Savings summary layer (`calculateManagedSavingsSummary`) from already-serialized active holdings: total balance, total monthly contributions, linked/unlinked counts, linked balance coverage percent, a balance-weighted `weightedLinkedAnnualized5YrReturn` (linked holdings with non-null `latestAnnualized5YrReturn` only — never the mock/fallback `trackPerformance`), and a per-type breakdown. This is a pure function over data already fetched by the data layer — it does not query the database or any external API itself.
+
+UI: `ManagedSavingsTable` now renders a linked/unlinked badge next to each holding's name and supports drag-and-drop reordering (`@dnd-kit/core` + `@dnd-kit/sortable`, desktop drag handle) with an up/down-button fallback (mobile/accessibility). `ExpandedManagedSavingsRow`'s unlinked state changed from amber to a red/error data-completeness style — still shows no public return numbers for unlinked holdings. `ManagedSavingsSummaryCards` gained a linked-coverage card, a weighted-5Y-assumption card (hidden/neutral when no eligible linked data exists), and a breakdown-by-type row. No AUM exposure, no peer/fund comparison, no advisory wording introduced.
+
+### Phase 2D-1 projection calculation update (2026-07-09)
+
+The projection calculation described above (`getEffectiveAnnualReturn`/`projectSimulations`, falling back to mock `trackPerformance` for unlinked holdings) is superseded for all live display surfaces. `src/lib/mock/managed-savings-data.ts` now exposes:
+
+- `getDisplayAnnualReturn(investment): number | null` — the linked fund's `latestAnnualized5YrReturn`, or `null`. Drives the "5-Year Return" table column, which shows "—" when null. Never falls back to mock data.
+- `getProjectionAnnualReturn(investment): number` — the linked return if available, otherwise `0` (a transparent "no growth assumed" projection rate, not a historical return). Never null, never mock.
+- `projectWithAvailableReturnOrZero(investment, years): Record<number, SimulationYear>` — always returns a result (never `null`). Linked holdings use the existing fee-adjusted compounding formula unchanged. Holdings with no linked return use a separate zero-return path (`runZeroReturnProjection`) that returns `currentBalance + monthlyContribution × months` with no fee applied — this guarantees a 0-contribution unlinked holding projects to exactly its current balance at every horizon, and avoids a division-by-zero in the compounding formula's annuity term when the effective rate is exactly 0.
+
+`calculateTotalSummary` (feeding the top KPI cards, the table totals row, and the legacy `ManagedSavingsSummaryTable`) now calls `projectWithAvailableReturnOrZero`, so every active holding contributes to these totals — holdings without a linked return contribute their 0%-assumption value, never an exclusion. `getEffectiveAnnualReturn`/`projectSimulations` remain in the file for potential future mock/demo use but are no longer called by any live display path.
+
 ## Important Notes
 
 Do not assume public PensionNet/GemelNet data includes the user's personal balance.
@@ -425,4 +465,4 @@ Public data usually provides fund-level returns and metadata only.
 
 `PublicFund` and `FundReturn` schema is implemented as of Phase 2C-1. Live Data.gov.il sync (Phase 2C-2, see `Context/sync-workflows.md`) is implemented and populates these tables for current GemelNet/PensionNet resources. Phase 2C-3A adds a local-DB-only search/ranking layer that reads `PublicFund`/`FundReturn` (no schema changes). Phase 2C-3B adds the user-confirmed `ManagedSavingsHolding.publicFundId` link (FK to `PublicFund`) plus link/unlink server actions and a matching UI — the link is identity-only (no AUM, no full `FundReturn` history).
 
-Public track performance on the Managed Savings page for **linked** holdings is real DB-backed `FundReturn` data as of Phase 2C-3B, rendered directly in `ExpandedManagedSavingsRow` — this is not mock/fallback. **Unlinked** holdings show a compact warning with no performance numbers displayed. The mock `trackPerformance` object survives only as a calculation fallback inside `getEffectiveAnnualReturn` (feeding the table 5Y column and `projectSimulations`) when a holding is unlinked, or linked to a fund with a null `latestAnnualized5YrReturn`. Phase 2C-4A (2026-07-05) hardened the underlying latest-return query layer and corrected this documentation; it made no UI changes.
+Public track performance on the Managed Savings page for **linked** holdings is real DB-backed `FundReturn` data as of Phase 2C-3B, rendered directly in `ExpandedManagedSavingsRow` — this is not mock/fallback. **Unlinked** holdings show a compact warning with no performance numbers displayed. Phase 2C-4A (2026-07-05) hardened the underlying latest-return query layer and corrected this documentation; it made no UI changes. As of the Phase 2D-1 projection calculation update (2026-07-09, see above), no live display path uses the mock `trackPerformance` object or `getEffectiveAnnualReturn`/`projectSimulations` — the 5-Year Return column and every currency-valued projection surface use `getDisplayAnnualReturn`/`getProjectionAnnualReturn`/`projectWithAvailableReturnOrZero` instead.

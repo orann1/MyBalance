@@ -35,6 +35,7 @@ async function main() {
   // Money values: ILS * 100 = agorot (BigInt minor units).
   // Fee values: percent * 100 = basis points (Int).
 
+  // displayOrder is deterministic and matches the seed array order (Phase 2D-1).
   const holdings = [
     {
       id: "hist-001",
@@ -53,6 +54,7 @@ async function main() {
       officialFundId: "BL-UH-0045",
       valuationDate: new Date("2026-06-27"),
       notes: "קרן השתלמות עיקרית — כדאי לבדוק מסלול כל שנה",
+      displayOrder: 1,
     },
     {
       id: "hist-002",
@@ -71,6 +73,7 @@ async function main() {
       officialFundId: "BD-UH-0048",
       valuationDate: new Date("2026-06-27"),
       notes: null,
+      displayOrder: 2,
     },
     {
       id: "gemel-001",
@@ -89,6 +92,7 @@ async function main() {
       officialFundId: "IB-GEMEL-0038",
       valuationDate: new Date("2026-06-26"),
       notes: "פתוחה עד גיל 18",
+      displayOrder: 3,
     },
     {
       id: "gemel-002",
@@ -107,6 +111,7 @@ async function main() {
       officialFundId: "IB-GEMEL-0038",
       valuationDate: new Date("2026-06-26"),
       notes: null,
+      displayOrder: 4,
     },
     {
       id: "hash-001",
@@ -125,6 +130,7 @@ async function main() {
       officialFundId: "BD-HASH-0065",
       valuationDate: new Date("2026-06-25"),
       notes: "ניתן למשוך בכל עת — נזילות גבוהה",
+      displayOrder: 5,
     },
     {
       id: "save-001",
@@ -143,6 +149,7 @@ async function main() {
       officialFundId: "PHX-SAVE-0080",
       valuationDate: new Date("2026-06-23"),
       notes: null,
+      displayOrder: 6,
     },
     {
       id: "gemel-003",
@@ -161,6 +168,7 @@ async function main() {
       officialFundId: "PHX-GEMEL-0040",
       valuationDate: new Date("2026-06-27"),
       notes: null,
+      displayOrder: 7,
     },
     {
       id: "save-002",
@@ -179,35 +187,44 @@ async function main() {
       officialFundId: "BL-SAVE-0075",
       valuationDate: new Date("2026-06-22"),
       notes: "חיסכון משותף — לבדוק חלוקה",
+      displayOrder: 8,
     },
   ];
 
+  // Create-if-missing only. Once a Product Owner (or any real usage) has
+  // edited, reordered, linked, or archived one of these holdings, re-running
+  // seed must NEVER overwrite that state — a prior upsert-based version of
+  // this loop reset status/displayOrder/balances/notes/etc. on every run,
+  // which silently reactivated archived holdings and reset manual edits
+  // during Phase 2D-1 QA (see Context/current-feature.md, data inconsistency
+  // audit). Existing rows are left completely untouched, including
+  // publicFundId — only missing canonical rows are created.
+  let createdCount = 0;
+  let skippedCount = 0;
+
   for (const holding of holdings) {
-    await prisma.managedSavingsHolding.upsert({
+    const existing = await prisma.managedSavingsHolding.findUnique({
       where: { id: holding.id },
-      update: {
-        userId: holding.userId,
-        name: holding.name,
-        type: holding.type,
-        owner: holding.owner,
-        status: holding.status,
-        currentBalanceMinor: holding.currentBalanceMinor,
-        monthlyContributionMinor: holding.monthlyContributionMinor,
-        currency: holding.currency,
-        accumulationFeeBps: holding.accumulationFeeBps,
-        depositFeeBps: holding.depositFeeBps,
-        managingCompany: holding.managingCompany,
-        trackName: holding.trackName,
-        officialFundId: holding.officialFundId,
-        valuationDate: holding.valuationDate,
-        notes: holding.notes,
-      },
-      create: holding,
+      select: { id: true },
     });
-    console.log(`  Upserted: ${holding.id} — ${holding.name}`);
+    if (existing) {
+      skippedCount += 1;
+      continue;
+    }
+    await prisma.managedSavingsHolding.create({ data: holding });
+    createdCount += 1;
+    console.log(`  Created: ${holding.id} — ${holding.name}`);
   }
 
-  console.log(`Seed complete. ${holdings.length} holdings seeded for ${DEV_USER_EMAIL}.`);
+  console.log(
+    `Managed savings seed: created ${createdCount}, skipped existing ${skippedCount}.`
+  );
+  console.log(
+    "Existing ManagedSavingsHolding rows are preserved — seed never overwrites status, balances, order, notes, or links."
+  );
+  console.log(
+    "To reset local QA data intentionally, use an explicit, Product-Owner-approved DB reset workflow — do not rely on re-running seed."
+  );
 
   console.log("Seeding public data resources (Phase 2C-1 config only — no Data.gov.il calls)...");
 

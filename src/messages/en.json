@@ -186,11 +186,22 @@
     "years": "years",
     "projectionsLabel": "Future Projections",
     "summaryCards": {
-      "totalCurrentValue": "Total Managed Savings",
+      "totalCurrentValue": "Current Savings Value",
       "totalMonthlyContributions": "Total Monthly Contributions",
-      "projectedIn5Years": "Projected in 5 Years",
-      "projectedIn10Years": "Projected in 10 Years",
-      "projectedInCustomYears": "Projected in {years} Years"
+      "projectedIn1Year": "Savings Value in 1 Year",
+      "projectedIn5Years": "Savings Value in 5 Years",
+      "projectedIn10Years": "Savings Value in 10 Years",
+      "projectedInCustomYears": "Savings Value in {years} Years",
+      "zeroReturnAssumptionHint": "Conservative projection: holdings without return data use 0% return"
+    },
+    "summary": {
+      "linkedCoverageTitle": "Linked Public Data Coverage",
+      "linkedCoverageValue": "{linked} of {total} linked",
+      "linkedBalanceCoverage": "Linked Balance Coverage",
+      "weighted5YAssumption": "Weighted 5Y Public Return Assumption",
+      "weighted5YInsufficientData": "Not enough linked public fund data to calculate a weighted public return assumption",
+      "breakdownByType": "Breakdown by Product Type",
+      "noHoldings": "No active holdings to display"
     },
     "tableColumns": {
       "name": "Investment Name",
@@ -211,7 +222,8 @@
       "typeHishtalmut": "Keren Hishtalmut",
       "typeGemel": "Kupat Gemel",
       "typeHashkaa": "Gemel LeHashkaa",
-      "typeSavings": "Savings Policy"
+      "typeSavings": "Savings Policy",
+      "typeOther": "Other"
     },
     "expandedView": {
       "investmentDetails": "Investment Details",
@@ -295,7 +307,22 @@
       "investmentsCount": "{count, plural, one {# fund} other {# funds}}",
       "expandSr": "Expand row",
       "actionsSr": "Actions",
-      "editTitle": "Edit"
+      "editTitle": "Edit",
+      "deleteTitle": "Delete",
+      "noReturnData": "No data",
+      "projectionZeroReturnTitle": "Holdings without return data use 0% return",
+      "linkedBadge": "Linked",
+      "unlinkedBadge": "Unlinked",
+      "reorderColumnSr": "Order",
+      "totalsLabel": "Total"
+    },
+    "ordering": {
+      "reorderInvestments": "Reorder Investments",
+      "dragHandle": "Drag to reorder",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "orderSaved": "Order saved",
+      "orderSaveFailed": "Order save failed, please try again"
     },
     "holdingsTitle": "Your Holdings",
     "emptyState": "No active managed savings holdings",
@@ -342,9 +369,12 @@
       "unlinkConfirmButton": "Confirm unlink",
       "unlinkCancelButton": "Cancel",
       "safetyNote": "Linking does not change your balance, contributions, or personal assumptions.",
-      "notLinkedCompactWarning": "No public fund is linked — use Edit to link a fund and view public return data.",
+      "notLinkedCompactWarning": "No public fund is linked. To display public return data, link this holding to a GemelNet fund from Edit.",
       "expandedNotLinkedHint": "Open Edit to link public fund data to this holding",
       "publicDataOnlyNote": "Public fund-level data only",
+      "changeSelectedFundButton": "Change selected fund",
+      "removeSelectedFundButton": "Remove selected fund",
+      "selectedPendingSaveNote": "The selected fund will be linked when you save this holding.",
       "linkedSummary": {
         "source": "Source",
         "fundName": "Fund name",
@@ -369,9 +399,12 @@
       "modal": {
         "title": "Link to public fund",
         "subtitle": "Search for a public fund to link to this holding",
-        "searchPlaceholder": "Search by fund name or managing company",
+        "searchPlaceholder": "Search by fund name, managing company, or fund number",
+        "searchHelper": "You can search by fund name, managing company, or the official fund number.",
+        "companySuggestionsTitle": "Managing companies",
         "searchButton": "Search public fund",
         "gemelnetOnlyNote": "Search uses the public GemelNet dataset. It may include Keren Hishtalmut, Kupat Gemel, and Gemel LeHashkaa funds where available.",
+        "truncatedResultsNote": "Showing the most relevant results. Search by fund number for an exact result.",
         "loading": "Searching...",
         "emptyResults": "No matching funds found",
         "errorSearch": "Search failed. Please try again.",

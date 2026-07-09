@@ -186,11 +186,22 @@
     "years": "שנים",
     "projectionsLabel": "הצגות לעתיד",
     "summaryCards": {
-      "totalCurrentValue": "סך החיסכון המנוהל",
+      "totalCurrentValue": "שווי חסכונות נוכחי",
       "totalMonthlyContributions": "סך התרומות החודשיות",
-      "projectedIn5Years": "תחזוקה בעוד 5 שנים",
-      "projectedIn10Years": "תחזוקה בעוד 10 שנים",
-      "projectedInCustomYears": "תחזוקה בעוד {years} שנים"
+      "projectedIn1Year": "שווי חסכונות בעוד שנה",
+      "projectedIn5Years": "שווי חסכונות בעוד 5 שנים",
+      "projectedIn10Years": "שווי חסכונות בעוד 10 שנים",
+      "projectedInCustomYears": "שווי חסכונות בעוד {years} שנים",
+      "zeroReturnAssumptionHint": "תחזית שמרנית: קרנות ללא נתוני תשואה מחושבות לפי 0% תשואה"
+    },
+    "summary": {
+      "linkedCoverageTitle": "כיסוי נתוני קרן ציבורית",
+      "linkedCoverageValue": "{linked} מתוך {total} מקושרים",
+      "linkedBalanceCoverage": "אחוז יתרה מקושרת",
+      "weighted5YAssumption": "הנחת תשואה ציבורית משוקללת ל-5 שנים",
+      "weighted5YInsufficientData": "אין מספיק נתוני קרנות מקושרות לחישוב הנחת תשואה ציבורית משוקללת",
+      "breakdownByType": "פילוח לפי סוג מוצר",
+      "noHoldings": "אין החזקות פעילות להצגה"
     },
     "tableColumns": {
       "name": "שם ההשקעה",
@@ -211,7 +222,8 @@
       "typeHishtalmut": "קרן השתלמות",
       "typeGemel": "קופת גמל",
       "typeHashkaa": "גמל להשקעה",
-      "typeSavings": "פוליסת חיסכון"
+      "typeSavings": "פוליסת חיסכון",
+      "typeOther": "אחר"
     },
     "expandedView": {
       "investmentDetails": "פרטי ההשקעה",
@@ -295,7 +307,22 @@
       "investmentsCount": "{count, plural, one {קרן אחת} other {{count} קרנות}}",
       "expandSr": "הרחב שורה",
       "actionsSr": "פעולות",
-      "editTitle": "ערוך"
+      "editTitle": "ערוך",
+      "deleteTitle": "מחק",
+      "noReturnData": "אין נתונים",
+      "projectionZeroReturnTitle": "קרנות ללא נתוני תשואה מחושבות לפי 0% תשואה",
+      "linkedBadge": "מקושר",
+      "unlinkedBadge": "לא מקושר",
+      "reorderColumnSr": "סדר",
+      "totalsLabel": "סה\"כ"
+    },
+    "ordering": {
+      "reorderInvestments": "סידור מחדש של ההשקעות",
+      "dragHandle": "גרור לסידור מחדש",
+      "moveUp": "הזז למעלה",
+      "moveDown": "הזז למטה",
+      "orderSaved": "הסדר נשמר",
+      "orderSaveFailed": "שמירת הסדר נכשלה, נסה שוב"
     },
     "holdingsTitle": "ההשקעות שלי",
     "emptyState": "אין קרנות חיסכון מנוהל פעילות",
@@ -342,9 +369,12 @@
       "unlinkConfirmButton": "אישור ניתוק",
       "unlinkCancelButton": "ביטול",
       "safetyNote": "הקישור אינו משנה את היתרה, ההפקדות או ההנחות האישיות שלך.",
-      "notLinkedCompactWarning": "לא קושרה קרן ציבורית — קשר קרן דרך עריכת ההחזקה כדי לראות נתוני תשואה ציבוריים.",
+      "notLinkedCompactWarning": "לא קושרה קרן ציבורית. כדי להציג נתוני תשואה ציבוריים, יש לקשר את החיסכון לקרן גמל-נט דרך עריכת החיסכון.",
       "expandedNotLinkedHint": "ניתן לקשר קרן ציבורית דרך עריכת ההחזקה",
       "publicDataOnlyNote": "נתוני קרן ציבוריים ברמת הקרן בלבד",
+      "changeSelectedFundButton": "החלף קרן נבחרת",
+      "removeSelectedFundButton": "הסר קרן נבחרת",
+      "selectedPendingSaveNote": "הקרן שנבחרה תקושר בעת שמירת החיסכון.",
       "linkedSummary": {
         "source": "מקור",
         "fundName": "שם הקרן",
@@ -369,9 +399,12 @@
       "modal": {
         "title": "קישור לקרן ציבורית",
         "subtitle": "חפש קרן ציבורית כדי לקשר אותה להשקעה זו",
-        "searchPlaceholder": "חפש לפי שם קרן או חברה מנהלת",
+        "searchPlaceholder": "חפש לפי שם קרן, חברה מנהלת או מספר קרן",
+        "searchHelper": "אפשר לחפש לפי שם הקרן, שם החברה המנהלת או מספר הקרן הרשמי.",
+        "companySuggestionsTitle": "חברות מנהלות",
         "searchButton": "חפש קרן ציבורית",
         "gemelnetOnlyNote": "החיפוש מתבצע במאגר גמל-נט הציבורי. המאגר עשוי לכלול קרנות השתלמות, קופות גמל וגמל להשקעה, בהתאם לנתונים הזמינים.",
+        "truncatedResultsNote": "מוצגות התוצאות הרלוונטיות ביותר. אפשר לחפש לפי מספר קרן לתוצאה מדויקת.",
         "loading": "מחפש...",
         "emptyResults": "לא נמצאו קרנות תואמות",
         "errorSearch": "החיפוש נכשל. נסה שוב.",

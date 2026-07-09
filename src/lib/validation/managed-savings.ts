@@ -5,6 +5,7 @@ const MANAGED_SAVINGS_TYPES = [
   "gemel",
   "hashkaa",
   "savings",
+  "other",
 ] as const;
 
 const OWNER_LABELS = [
@@ -40,7 +41,15 @@ const baseFields = {
   notes: z.string().max(500).optional(),
 };
 
-export const CreateManagedSavingsSchema = z.object(baseFields);
+export const CreateManagedSavingsSchema = z.object({
+  ...baseFields,
+  // Optional initial public fund link, selected by the user in the Add
+  // modal's PublicFundMatchModal (select-only mode) before saving. Verified
+  // server-side (existence + GemelNet source) in createManagedSavingsHolding.
+  // Update/edit never touches publicFundId — link/unlink stays a dedicated
+  // action.
+  publicFundId: z.string().min(1).optional(),
+});
 
 export const UpdateManagedSavingsSchema = z.object({
   id: z.string().min(1),
@@ -51,6 +60,18 @@ export const ArchiveManagedSavingsSchema = z.object({
   id: z.string().min(1),
 });
 
+// Reorder: client submits the full set of currently visible (active) holding
+// ids in the user's desired display order. Duplicates are rejected here;
+// ownership/archived/missing-id checks happen in the server action itself.
+export const ReorderManagedSavingsSchema = z.object({
+  orderedIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "Duplicate ids are not allowed",
+    }),
+});
+
 export type CreateManagedSavingsInput = z.infer<
   typeof CreateManagedSavingsSchema
 >;
@@ -59,4 +80,7 @@ export type UpdateManagedSavingsInput = z.infer<
 >;
 export type ArchiveManagedSavingsInput = z.infer<
   typeof ArchiveManagedSavingsSchema
+>;
+export type ReorderManagedSavingsInput = z.infer<
+  typeof ReorderManagedSavingsSchema
 >;

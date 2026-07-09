@@ -1,7 +1,10 @@
 "use server";
 
 import { PublicDataSource, PublicFundProductType } from "@prisma/client";
-import { searchPublicFundsForMatching } from "@/lib/public-funds/search-public-funds";
+import {
+  searchPublicFundsForMatching,
+  listManagingCompanies,
+} from "@/lib/public-funds/search-public-funds";
 import { PublicFundSearchSchema } from "@/lib/validation/public-fund-matching";
 import type { PublicFundMatchCandidate } from "@/lib/public-funds/search-types";
 
@@ -32,6 +35,24 @@ export async function searchPublicFundsForMatchingAction(
       limit: parsed.data.limit,
     });
     return { ok: true, candidates };
+  } catch {
+    return { ok: false, error: "server_error" };
+  }
+}
+
+export type ListManagingCompaniesActionResult =
+  | { ok: true; companies: string[] }
+  | { ok: false; error: "server_error" };
+
+/**
+ * Lists GemelNet managing companies for lightweight search suggestions in
+ * PublicFundMatchModal. Local DB only — never calls Data.gov.il. No input
+ * to validate (fixed, read-only query), no personal data returned.
+ */
+export async function listGemelnetManagingCompaniesAction(): Promise<ListManagingCompaniesActionResult> {
+  try {
+    const companies = await listManagingCompanies(PublicDataSource.gemelnet);
+    return { ok: true, companies };
   } catch {
     return { ok: false, error: "server_error" };
   }

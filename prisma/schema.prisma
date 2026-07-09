@@ -17,6 +17,7 @@ enum ManagedSavingsType {
   gemel // Kupat Gemel
   hashkaa // Gemel LeHashkaa
   savings // Savings policy / managed savings
+  other // Private investment / bank account / anything not covered above (Phase 2D-1 QA fix)
 }
 
 enum OwnerLabel {
@@ -91,6 +92,11 @@ model ManagedSavingsHolding {
   owner  OwnerLabel         @default(self)
   status HoldingStatus      @default(active)
 
+  // User-controlled display order within the holdings table (Phase 2D-1).
+  // Lower values render first. Backfilled from createdAt asc on introduction;
+  // new holdings are appended (max existing + 1) by createManagedSavingsHolding.
+  displayOrder Int @default(0)
+
   // Money stored as agorot (integer minor units). Never use floats for persisted balances.
   currentBalanceMinor      BigInt @default(0)
   monthlyContributionMinor BigInt @default(0)
@@ -123,6 +129,7 @@ model ManagedSavingsHolding {
 
   @@index([userId])
   @@index([userId, status])
+  @@index([userId, displayOrder])
   @@index([type])
   @@index([officialFundId])
   @@index([publicFundId])

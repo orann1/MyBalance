@@ -721,3 +721,28 @@ Branch History:
 - Feature branch: `feature/fund-return-query-hardening`
 - Merged into: `master`
 - Commit: `perf: harden public fund return lookups`
+
+## Phase 2D-1 — Managed Savings Summary + Ordering
+
+Status: **COMPLETED AND VERIFIED** (2026-07-09). Product Owner browser QA approved after several fix rounds. Committed and merged into `master`.
+
+Completed:
+- **Ordering**: `ManagedSavingsHolding.displayOrder Int @default(0)` (migration `20260706125519_add_managed_savings_display_order`, backfilled to preserve existing order). Drag-and-drop reordering (`@dnd-kit`) with an up/down-button fallback for mobile/accessibility, persisted via a new `reorderManagedSavingsHoldings` server action, with a save-status toast.
+- **Summary layer**: `src/lib/managed-savings/summary.ts` computes linked/unlinked counts, linked balance coverage, a balance-weighted linked 5Y return assumption, and a per-type breakdown. Top KPI cards (current/1Y/5Y/10Y savings value) and a breakdown-by-type section added to the page.
+- **"Other" holding type**: `ManagedSavingsType.other` added via an additive migration (`20260709125444_add_managed_savings_type_other`), wired through validation, UI, and breakdown for private investments/bank accounts not covered by the four original types.
+- **Seed safety**: `prisma/seed.ts`'s `ManagedSavingsHolding` seeding changed from destructive upsert to create-if-missing only — re-running `db:seed:local` never resets an existing holding's status, balance, order, or link.
+- **Projection behavior (final)**: the 5-Year Return display column shows the real linked public fund return (`getDisplayAnnualReturn`) or "—" when no link exists — never a mock percentage. Currency-valued projections (1Y/5Y/10Y/custom-horizon, top KPI cards, table totals, legacy summary table) use `getProjectionAnnualReturn`/`projectWithAvailableReturnOrZero`: linked holdings project with their real return; holdings without one project with an explicit 0% assumption (current balance + contributions, no growth, no fee) — always a real amount, never hidden and never mock-derived.
+- **Public fund linking**: available from both Add and Edit flows (`PublicFundMatchModal`, GemelNet-only, no PensionNet selector in this modal).
+- **Other UI fixes along the way**: unlinked-state styling changed to red/error (from amber), linked/unlinked table badges, linked-company display cleanup, search result completeness fix (raised modal result limit so ties don't hide valid candidates), reorder toast visibility fix, `displayOrder` collision cleanup from earlier seed damage.
+
+Known Deferred Items (carried forward):
+- Groups/sections (e.g. "My investments" / "Spouse investments") — recommended as a future Phase 2D-2 planning task, not implemented.
+- Peer comparison, fund classifier, beta/volatility metrics — not implemented.
+- No AUM display; no Data.gov.il live sync introduced by this phase.
+- Table horizontal scroll partially minimized but not fully eliminated at common viewport widths.
+- Earlier seed-damage-overwritten row values are not recoverable without backup/manual correction.
+
+Branch History:
+- Feature branch: `feature/managed-savings-summary-ordering`
+- Merged into: `master`
+- Commit: `feat: enhance managed savings ordering and projections`

@@ -151,10 +151,10 @@ export function ExpandedManagedSavingsRow({
             </div>
           </div>
         ) : (
-          /* Not linked — compact amber warning only */
-          <div className="flex items-start gap-2.5 rounded-lg bg-amber-50 border border-amber-200/70 px-4 py-3">
-            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-600" />
-            <p className="text-xs text-amber-900">
+          /* Not linked — compact red/error data-completeness state (Phase 2D-1) */
+          <div className="flex items-start gap-2.5 rounded-lg bg-red-50 border border-red-200/70 px-4 py-3">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-600" />
+            <p className="text-xs text-red-900">
               {tLink("notLinkedCompactWarning")}
             </p>
           </div>
@@ -178,8 +178,16 @@ export function ExpandedManagedSavingsRow({
         </div>
 
         {/* METADATA */}
-        <div className="text-xs text-muted-foreground px-1">
-          {t("lastUpdated")}: {investment.lastUpdateDate}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground px-1">
+          <span>
+            {t("lastUpdated")}: {investment.lastUpdateDate}
+          </span>
+          {investment.officialFundId && (
+            <span>
+              {t("expandedView.fundId")}:{" "}
+              <span className="font-mono">{investment.officialFundId}</span>
+            </span>
+          )}
         </div>
       </div>
     </div>

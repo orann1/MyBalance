@@ -1,19 +1,36 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { Search, X, Info, Link2, Loader2 } from "lucide-react";
 import { formatPercent, formatDate } from "@/lib/locale/formatters";
-import { searchPublicFundsForMatchingAction } from "@/lib/actions/public-fund-matching-actions";
+import {
+  searchPublicFundsForMatchingAction,
+  listGemelnetManagingCompaniesAction,
+} from "@/lib/actions/public-fund-matching-actions";
 import { linkManagedSavingsHoldingToPublicFund } from "@/lib/actions/public-fund-linking-actions";
 import type { ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
 import type { PublicFundMatchCandidate } from "@/lib/public-funds/search-types";
 
+// Only the fields this modal actually reads. Loosened from the full
+// ManagedSavingsInvestment type so the Add modal can pass a draft (no id
+// yet, since the holding doesn't exist until save) alongside the Edit
+// modal's real investment.
+type PublicFundMatchInvestment = Pick<ManagedSavingsInvestment, "officialFundId"> & {
+  id?: string;
+};
+
 interface PublicFundMatchModalProps {
-  investment: ManagedSavingsInvestment;
+  investment: PublicFundMatchInvestment;
   isOpen: boolean;
   onClose: () => void;
-  onLinkSuccess: (holding: ManagedSavingsInvestment) => void;
+  // Edit flow (existing holding): links immediately via the dedicated
+  // link action and returns the updated, serialized holding.
+  onLinkSuccess?: (holding: ManagedSavingsInvestment) => void;
+  // Add flow (no holding yet): select-only mode — the chosen candidate is
+  // handed back to the caller and only persisted when the new holding is
+  // saved. When provided, this takes priority over the immediate-link path.
+  onSelectCandidate?: (candidate: PublicFundMatchCandidate) => void;
 }
 
 // Managed Savings products (Keren Hishtalmut, Kupat Gemel, Gemel LeHashkaa,
@@ -23,8 +40,30 @@ interface PublicFundMatchModalProps {
 // supports both sources for other future screens.
 const MANAGED_SAVINGS_SOURCE = "gemelnet" as const;
 
-function buildInitialQuery(investment: ManagedSavingsInvestment): string {
-  return [investment.track, investment.managingCompany].filter(Boolean).join(" ").trim();
+const MAX_COMPANY_SUGGESTIONS = 20;
+
+// Matches the search backend's MAX_SEARCH_LIMIT ceiling (src/lib/public-funds/search-types.ts).
+// Previously 10 — too small when many funds from the same managing company
+// tie on relevance score (e.g. 40 GemelNet "אנליסט" funds all score
+// identically), pushing a relevant fund like fundId 963 just past the
+// visible cutoff. 20 is the maximum the validated server action accepts.
+const MAX_MODAL_RESULTS = 20;
+
+// Default search query must never be prefilled with mock/internal track or
+// company text (e.g. a generic mock track name) — it is very unlikely to
+// match the actual public fund name and confuses users. Only a genuinely
+// numeric officialFundId (which may be a real public fund number) is
+// offered; otherwise the field starts empty and the user searches manually.
+function buildInitialQuery(investment: PublicFundMatchInvestment): string {
+  const officialId = investment.officialFundId?.trim();
+  if (officialId && /^\d+$/.test(officialId)) {
+    return officialId;
+  }
+  return "";
+}
+
+function isNumericFundNumber(value: string): boolean {
+  return /^\d+$/.test(value.trim());
 }
 
 export function PublicFundMatchModal({
@@ -32,6 +71,7 @@ export function PublicFundMatchModal({
   isOpen,
   onClose,
   onLinkSuccess,
+  onSelectCandidate,
 }: PublicFundMatchModalProps) {
   const t = useTranslations("managedSavings.publicFundLinking.modal");
   const tSource = useTranslations("managedSavings.publicFundLinking.sourceLabels");
@@ -45,20 +85,52 @@ export function PublicFundMatchModal({
   const [isSearching, startSearch] = useTransition();
   const [isLinking, startLink] = useTransition();
 
+  const [companies, setCompanies] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [possiblyTruncated, setPossiblyTruncated] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    listGemelnetManagingCompaniesAction().then((result) => {
+      if (!cancelled && result.ok) setCompanies(result.companies);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredSuggestions = useMemo(() => {
+    const trimmed = query.trim();
+    const pool = trimmed ? companies.filter((company) => company.includes(trimmed)) : companies;
+    return pool.slice(0, MAX_COMPANY_SUGGESTIONS);
+  }, [companies, query]);
+
   if (!isOpen) return null;
 
-  const handleSearch = () => {
+  const runSearch = (rawQuery: string) => {
     setSearchError(false);
     setLinkError(false);
+    setShowSuggestions(false);
+    setPossiblyTruncated(false);
+    const trimmed = rawQuery.trim();
     startSearch(async () => {
-      const result = await searchPublicFundsForMatchingAction({
-        query: query || undefined,
-        source: MANAGED_SAVINGS_SOURCE,
-        limit: 10,
-      });
+      // Numeric-only input is treated as a fund number (fundId), not a
+      // free-text query — fund numbers never appear in fundName/company text.
+      const result = await searchPublicFundsForMatchingAction(
+        isNumericFundNumber(trimmed)
+          ? { fundId: trimmed, source: MANAGED_SAVINGS_SOURCE, limit: MAX_MODAL_RESULTS }
+          : { query: trimmed || undefined, source: MANAGED_SAVINGS_SOURCE, limit: MAX_MODAL_RESULTS }
+      );
       setHasSearched(true);
       if (result.ok) {
         setCandidates(result.candidates);
+        // Heuristic: hitting the requested limit means there may be more
+        // matches than shown (e.g. a managing company with many funds).
+        // Not shown for exact fund-number lookups, which return at most one
+        // match per source and would never legitimately hit this ceiling.
+        setPossiblyTruncated(
+          !isNumericFundNumber(trimmed) && result.candidates.length >= MAX_MODAL_RESULTS
+        );
       } else {
         setCandidates([]);
         setSearchError(true);
@@ -66,17 +138,33 @@ export function PublicFundMatchModal({
     });
   };
 
+  const handleSearch = () => runSearch(query);
+
+  const handleSelectSuggestion = (company: string) => {
+    setQuery(company);
+    runSearch(company);
+  };
+
   const handleLink = (candidate: PublicFundMatchCandidate) => {
+    // Add flow (no holding yet): hand the selection back to the caller.
+    // Nothing is persisted here — the holding doesn't exist until save.
+    if (onSelectCandidate) {
+      onSelectCandidate(candidate);
+      return;
+    }
+
+    // Edit flow (existing holding): link immediately.
+    if (!investment.id) return;
     setLinkError(false);
     setLinkingFundId(candidate.publicFundId);
     startLink(async () => {
       const result = await linkManagedSavingsHoldingToPublicFund({
-        holdingId: investment.id,
+        holdingId: investment.id!,
         publicFundId: candidate.publicFundId,
       });
       setLinkingFundId(null);
       if (result.ok) {
-        onLinkSuccess(result.holding);
+        onLinkSuccess?.(result.holding);
       } else {
         setLinkError(true);
       }
@@ -111,18 +199,42 @@ export function PublicFundMatchModal({
         <div className="p-6 space-y-5">
           {/* Search controls — GemelNet only, no source selector (Managed Savings is non-pension) */}
           <div className="flex flex-col sm:flex-row gap-3">
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder={t("searchPlaceholder")}
-              className="flex-1 px-3 py-2.5 text-sm rounded-lg border border-border/50 bg-white/80 hover:bg-white focus:outline-none focus:ring-2 focus:ring-asset focus:border-transparent transition-colors"
-            />
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                placeholder={t("searchPlaceholder")}
+                className="w-full px-3 py-2.5 text-sm rounded-lg border border-border/50 bg-white/80 hover:bg-white focus:outline-none focus:ring-2 focus:ring-asset focus:border-transparent transition-colors"
+              />
+              {showSuggestions && filteredSuggestions.length > 0 && (
+                <div className="absolute z-30 mt-1 w-full max-h-56 overflow-y-auto rounded-lg border border-border/50 bg-white shadow-lg">
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    {t("companySuggestionsTitle")}
+                  </p>
+                  {filteredSuggestions.map((company) => (
+                    <button
+                      key={company}
+                      type="button"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectSuggestion(company);
+                      }}
+                      className="block w-full text-start px-3 py-2 text-xs text-foreground hover:bg-secondary/40 transition-colors"
+                    >
+                      {company}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               onClick={handleSearch}
               disabled={isSearching}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-asset rounded-lg hover:bg-asset/85 active:scale-95 transition-all duration-150 shadow-md hover:shadow-lg disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-bold text-white bg-asset rounded-lg hover:bg-asset/85 active:scale-95 transition-all duration-150 shadow-md hover:shadow-lg disabled:opacity-50 shrink-0"
             >
               {isSearching ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -132,6 +244,8 @@ export function PublicFundMatchModal({
               {t("searchButton")}
             </button>
           </div>
+
+          <p className="text-xs text-muted-foreground -mt-2">{t("searchHelper")}</p>
 
           {/* Disclaimer */}
           <div className="rounded-xl bg-blue-50/60 border border-blue-200/40 p-4 space-y-1.5">
@@ -174,6 +288,13 @@ export function PublicFundMatchModal({
             {!isSearching && !searchError && hasSearched && candidates.length === 0 && (
               <div className="rounded-xl border border-border/40 bg-secondary/20 p-6 text-center">
                 <p className="text-sm text-muted-foreground">{t("emptyResults")}</p>
+              </div>
+            )}
+
+            {!isSearching && !searchError && possiblyTruncated && candidates.length > 0 && (
+              <div className="flex items-start gap-2 rounded-xl bg-blue-50/60 border border-blue-200/40 p-3">
+                <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-blue-600" />
+                <p className="text-xs text-blue-900">{t("truncatedResultsNote")}</p>
               </div>
             )}
 

@@ -205,6 +205,7 @@ export function EditManagedFundModal({
                       <option value="gemel">{t("tableColumns.typeGemel")}</option>
                       <option value="hashkaa">{t("tableColumns.typeHashkaa")}</option>
                       <option value="savings">{t("tableColumns.typeSavings")}</option>
+                      <option value="other">{t("tableColumns.typeOther")}</option>
                     </select>
                   </div>
                   <div>
@@ -534,7 +535,7 @@ export function EditManagedFundModal({
       {/* Match modal — z-[70] renders above edit modal's z-50 */}
       {showMatchModal && (
         <PublicFundMatchModal
-          investment={{ ...investment, linkedPublicFund: currentLinkedFund }}
+          investment={investment}
           isOpen={showMatchModal}
           onClose={() => setShowMatchModal(false)}
           onLinkSuccess={handleLinkSuccess}
