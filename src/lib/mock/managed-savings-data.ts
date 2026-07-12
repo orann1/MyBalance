@@ -8,7 +8,11 @@ export interface ManagedSavingsInvestment {
   monthlyContribution: number;
   accumulationFeePercent: number;
   depositFeePercent: number;
-  owner: "self" | "spouse" | "child" | "shared" | "family" | "other";
+  // Free-text ownership label (Phase 2D-2A) — separate from group membership.
+  // Replaces the old fixed OwnerLabel enum; never derived/translated.
+  ownershipLabel: string;
+  // Every holding belongs to exactly one user-defined group (Phase 2D-2A).
+  groupId: string;
   lastUpdateDate: string;
   status: "active" | "inactive";
   officialFundId?: string;
@@ -52,6 +56,10 @@ export interface SimulationYear {
   estimatedNetGain: number;
 }
 
+// Mock-only placeholder group id — this array is historical seed reference
+// data, not part of any live display path (see getMockManagedSavingsData).
+const MOCK_DEFAULT_GROUP_ID = "mock-group-default";
+
 const managedSavingsInvestments: ManagedSavingsInvestment[] = [
   {
     id: "hist-001",
@@ -63,7 +71,8 @@ const managedSavingsInvestments: ManagedSavingsInvestment[] = [
     monthlyContribution: 650,
     accumulationFeePercent: 0.45,
     depositFeePercent: 0.0,
-    owner: "self",
+    ownershipLabel: "עצמי",
+    groupId: MOCK_DEFAULT_GROUP_ID,
     lastUpdateDate: "2026-06-27",
     status: "active",
     officialFundId: "BL-UH-0045",
@@ -85,7 +94,8 @@ const managedSavingsInvestments: ManagedSavingsInvestment[] = [
     monthlyContribution: 600,
     accumulationFeePercent: 0.48,
     depositFeePercent: 0.0,
-    owner: "spouse",
+    ownershipLabel: "בן/בת זוג",
+    groupId: MOCK_DEFAULT_GROUP_ID,
     lastUpdateDate: "2026-06-27",
     status: "active",
     officialFundId: "BD-UH-0048",
@@ -107,7 +117,8 @@ const managedSavingsInvestments: ManagedSavingsInvestment[] = [
     monthlyContribution: 200,
     accumulationFeePercent: 0.38,
     depositFeePercent: 0.0,
-    owner: "child",
+    ownershipLabel: "ילד/ה",
+    groupId: MOCK_DEFAULT_GROUP_ID,
     lastUpdateDate: "2026-06-26",
     status: "active",
     officialFundId: "IB-GEMEL-0038",
@@ -129,7 +140,8 @@ const managedSavingsInvestments: ManagedSavingsInvestment[] = [
     monthlyContribution: 175,
     accumulationFeePercent: 0.38,
     depositFeePercent: 0.0,
-    owner: "child",
+    ownershipLabel: "ילד/ה",
+    groupId: MOCK_DEFAULT_GROUP_ID,
     lastUpdateDate: "2026-06-26",
     status: "active",
     officialFundId: "IB-GEMEL-0038",
@@ -151,7 +163,8 @@ const managedSavingsInvestments: ManagedSavingsInvestment[] = [
     monthlyContribution: 400,
     accumulationFeePercent: 0.65,
     depositFeePercent: 0.0,
-    owner: "shared",
+    ownershipLabel: "משותף",
+    groupId: MOCK_DEFAULT_GROUP_ID,
     lastUpdateDate: "2026-06-25",
     status: "active",
     officialFundId: "BD-HASH-0065",
@@ -173,7 +186,8 @@ const managedSavingsInvestments: ManagedSavingsInvestment[] = [
     monthlyContribution: 400,
     accumulationFeePercent: 0.8,
     depositFeePercent: 0.0,
-    owner: "family",
+    ownershipLabel: "משפחה",
+    groupId: MOCK_DEFAULT_GROUP_ID,
     lastUpdateDate: "2026-06-23",
     status: "active",
     officialFundId: "PHX-SAVE-0080",
@@ -195,7 +209,8 @@ const managedSavingsInvestments: ManagedSavingsInvestment[] = [
     monthlyContribution: 350,
     accumulationFeePercent: 0.40,
     depositFeePercent: 0.0,
-    owner: "self",
+    ownershipLabel: "עצמי",
+    groupId: MOCK_DEFAULT_GROUP_ID,
     lastUpdateDate: "2026-06-27",
     status: "active",
     officialFundId: "PHX-GEMEL-0040",
@@ -217,7 +232,8 @@ const managedSavingsInvestments: ManagedSavingsInvestment[] = [
     monthlyContribution: 300,
     accumulationFeePercent: 0.75,
     depositFeePercent: 0.0,
-    owner: "shared",
+    ownershipLabel: "משותף",
+    groupId: MOCK_DEFAULT_GROUP_ID,
     lastUpdateDate: "2026-06-22",
     status: "active",
     officialFundId: "BL-SAVE-0075",

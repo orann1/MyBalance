@@ -62,7 +62,11 @@ export function serializeHolding(
     monthlyContribution: fromMinorUnits(record.monthlyContributionMinor),
     accumulationFeePercent: bpsToPercent(record.accumulationFeeBps),
     depositFeePercent: bpsToPercent(record.depositFeeBps),
-    owner: record.owner as ManagedSavingsInvestment["owner"],
+    // Free-text ownership label (Phase 2D-2A) — the legacy "owner" enum
+    // column still exists on the record for rollback safety but is no longer
+    // read here.
+    ownershipLabel: record.ownershipLabel,
+    groupId: record.groupId,
     lastUpdateDate: dateSource.toISOString().split("T")[0],
     // The data access layer filters out archived holdings before serialization,
     // so only "active" and "inactive" records arrive here.

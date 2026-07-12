@@ -1,4 +1,7 @@
-import type { ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
+import {
+  projectWithAvailableReturnOrZero,
+  type ManagedSavingsInvestment,
+} from "@/lib/mock/managed-savings-data";
 
 export interface ManagedSavingsTypeBreakdown {
   type: ManagedSavingsInvestment["type"];
@@ -111,4 +114,50 @@ export function calculateManagedSavingsSummary(
     weightedLinkedAnnualized5YrReturn,
     holdingsByType,
   };
+}
+
+export interface ManagedSavingsProjectionTotals {
+  currentBalance: number;
+  monthlyContribution: number;
+  in1Year: number;
+  in5Years: number;
+  in10Years: number;
+  inCustomYears: number;
+}
+
+/**
+ * Shared projection-totals aggregation — the single source of truth used by
+ * both the per-group summary row and the global table totals row (Phase
+ * 2D-2A). Reuses `projectWithAvailableReturnOrZero` per holding (same
+ * function the main table's per-row cells use): a holding with a usable
+ * linked public 5-year return compounds with that rate; a holding without
+ * one uses an explicit 0% return assumption (current balance + accumulated
+ * contributions). Never reads the mock/fallback trackPerformance value.
+ */
+export function calculateProjectionTotals(
+  investments: ManagedSavingsInvestment[],
+  customYears: number
+): ManagedSavingsProjectionTotals {
+  return investments.reduce<ManagedSavingsProjectionTotals>(
+    (totals, investment) => {
+      const projections = projectWithAvailableReturnOrZero(investment, customYears);
+      return {
+        currentBalance: totals.currentBalance + investment.currentBalance,
+        monthlyContribution: totals.monthlyContribution + investment.monthlyContribution,
+        in1Year: totals.in1Year + (projections[1]?.projectedValue ?? 0),
+        in5Years: totals.in5Years + (projections[5]?.projectedValue ?? 0),
+        in10Years: totals.in10Years + (projections[10]?.projectedValue ?? 0),
+        inCustomYears:
+          totals.inCustomYears + (projections[customYears]?.projectedValue ?? 0),
+      };
+    },
+    {
+      currentBalance: 0,
+      monthlyContribution: 0,
+      in1Year: 0,
+      in5Years: 0,
+      in10Years: 0,
+      inCustomYears: 0,
+    }
+  );
 }

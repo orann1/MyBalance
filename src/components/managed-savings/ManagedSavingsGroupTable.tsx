@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useTranslations } from "next-intl";
-import { ChevronDown, TrendingUp, Edit2, Trash2, GripVertical, ArrowUp, ArrowDown, Link2, Info } from "lucide-react";
+import { ChevronDown, Edit2, Trash2, GripVertical, ArrowUp, ArrowDown, Link2 } from "lucide-react";
 import {
   DndContext,
   KeyboardSensor,
@@ -23,20 +23,22 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/utils";
 import { formatCurrency, formatPercent } from "@/lib/locale/formatters";
 import { ExpandedManagedSavingsRow } from "./ExpandedManagedSavingsRow";
+import { ManagedSavingsGroupSummaryRow } from "./ManagedSavingsGroupSummaryRow";
 import {
   projectWithAvailableReturnOrZero,
   type ManagedSavingsInvestment,
 } from "@/lib/mock/managed-savings-data";
 import { getCompanyDisplay, formatCompanyNameForTable } from "@/lib/managed-savings/company-display";
 
-interface ManagedSavingsTableProps {
+interface ManagedSavingsGroupTableProps {
+  groupId: string;
   investments: ManagedSavingsInvestment[];
   customYears: number;
-  onCustomYearsChange?: (years: number) => void;
   onEditClick?: (investment: ManagedSavingsInvestment) => void;
   onDeleteClick?: (investment: ManagedSavingsInvestment) => void;
-  // Called with the full desired order of holding ids after a drag-and-drop
-  // reorder or an up/down move. The caller owns persistence + optimistic state.
+  // Called with the full desired order of this group's holding ids after a
+  // same-group drag-and-drop reorder or an up/down move. Cross-group moves
+  // are not handled here (Phase 2D-2A) — use the Edit modal's group selector.
   onReorder?: (orderedIds: string[]) => void;
 }
 
@@ -85,7 +87,6 @@ function InvestmentRow({
   onMoveDown,
 }: InvestmentRowProps) {
   const t = useTranslations("managedSavings");
-  const tOwner = useTranslations("managedSavings.ownerLabels");
   const tOrdering = useTranslations("managedSavings.ordering");
   const isLinked = investment.linkedPublicFund != null;
   const companyDisplay = getCompanyDisplay(investment);
@@ -192,8 +193,11 @@ function InvestmentRow({
           </div>
         </td>
         <td className="h-14 px-3 py-3 text-start border-e border-border/15">
-          <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-secondary/80 text-foreground border border-border/40">
-            {tOwner(investment.owner)}
+          <span
+            className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold bg-secondary/80 text-foreground border border-border/40"
+            title={investment.ownershipLabel}
+          >
+            {investment.ownershipLabel}
           </span>
         </td>
         <td className="h-14 px-3 py-3 text-start border-e border-border/15">
@@ -303,14 +307,14 @@ function InvestmentRow({
   );
 }
 
-export function ManagedSavingsTable({
+export function ManagedSavingsGroupTable({
+  groupId,
   investments,
   customYears,
-  onCustomYearsChange,
   onEditClick,
   onDeleteClick,
   onReorder,
-}: ManagedSavingsTableProps) {
+}: ManagedSavingsGroupTableProps) {
   const t = useTranslations("managedSavings");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -319,26 +323,16 @@ export function ManagedSavingsTable({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  // Pre-compute projections for every investment row. Uses
-  // projectWithAvailableReturnOrZero — a holding with no eligible linked
-  // return still gets a real projected currency value here (current balance
-  // + accumulated contributions, 0% growth), not null/hidden (Phase 2D-1
-  // zero-return-assumption fix). The raw 5-Year Return percentage column
-  // remains a separate, strict "—"-when-unlinked display driven directly by
-  // `investment.linkedPublicFund?.latestAnnualized5YrReturn`.
-  const projections = useMemo(() => {
-    const map: Record<string, Record<number, number>> = {};
-    investments.forEach((inv) => {
-      const sims = projectWithAvailableReturnOrZero(inv, customYears);
-      map[inv.id] = {
-        1: sims[1]?.projectedValue ?? 0,
-        5: sims[5]?.projectedValue ?? 0,
-        10: sims[10]?.projectedValue ?? 0,
-        [customYears]: sims[customYears]?.projectedValue ?? 0,
-      };
-    });
-    return map;
-  }, [investments, customYears]);
+  const projections: Record<string, Record<number, number>> = {};
+  investments.forEach((inv) => {
+    const sims = projectWithAvailableReturnOrZero(inv, customYears);
+    projections[inv.id] = {
+      1: sims[1]?.projectedValue ?? 0,
+      5: sims[5]?.projectedValue ?? 0,
+      10: sims[10]?.projectedValue ?? 0,
+      [customYears]: sims[customYears]?.projectedValue ?? 0,
+    };
+  });
 
   const typeLabels: Record<string, string> = {
     hishtalmut: t("tableColumns.typeHishtalmut"),
@@ -378,186 +372,94 @@ export function ManagedSavingsTable({
     onReorder?.(reordered.map((inv) => inv.id));
   };
 
-  // Table totals row — sums every visible (non-archived, already filtered by
-  // the data loader) holding's current balance and projected values.
-  // Holdings without a linked return contribute their 0%-growth projected
-  // value (current balance + contributions) via projections[id], not zero
-  // and not an exclusion (Phase 2D-1 zero-return-assumption fix).
-  const totals = investments.reduce(
-    (acc, inv) => {
-      acc.currentBalance += inv.currentBalance;
-      acc.in1Year += projections[inv.id]?.[1] ?? 0;
-      acc.in5Years += projections[inv.id]?.[5] ?? 0;
-      acc.in10Years += projections[inv.id]?.[10] ?? 0;
-      acc.customYears += projections[inv.id]?.[customYears] ?? 0;
-      return acc;
-    },
-    { currentBalance: 0, in1Year: 0, in5Years: 0, in10Years: 0, customYears: 0 }
-  );
-
   return (
-    <div className="rounded-3xl bg-card border border-border/60 shadow-card overflow-hidden">
-      {/* Section Header */}
-      <div className="bg-gradient-to-r from-secondary/60 to-secondary/30 border-b border-border/40 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
-          <h3 className="text-lg font-bold flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-asset" />
-            {t("pageTitle")}
-          </h3>
-          <div className="flex items-center gap-3">
-            {/* Custom horizon control — attached to the table, not a
-                disconnected top-page strip (Product QA fix round). */}
-            <div className="flex items-center gap-2 rounded-lg bg-white/70 border border-border/40 px-3 py-1.5">
-              <label htmlFor="managed-savings-custom-years" className="text-xs font-semibold text-foreground whitespace-nowrap">
-                {t("customHorizon")}
-              </label>
-              <input
-                id="managed-savings-custom-years"
-                type="number"
-                min="1"
-                max="50"
-                value={customYears}
-                onChange={(e) => onCustomYearsChange?.(Math.max(1, Number(e.target.value)))}
-                className="w-16 px-2 py-1 rounded-md border border-border bg-background text-xs font-mono font-semibold text-center focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-asset"
-              />
-              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">
-                {t("years")}
-              </span>
-            </div>
-            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-              {t("table.investmentsCount", { count: investments.length })}
-            </span>
-          </div>
-        </div>
-        <p className="text-sm text-muted-foreground">{t("pageSubtitle")}</p>
-      </div>
-
-      {/* Table */}
-      <div className="overflow-x-auto">
-        <DndContext
-          id="managed-savings-holdings"
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="bg-secondary/40 border-b-2 border-border/80">
-                <th className="h-12 px-2 py-3 text-center font-semibold text-muted-foreground w-12 border-e border-border/30">
-                  <span className="sr-only">{t("table.reorderColumnSr")}</span>
-                </th>
-                <th className="h-12 px-3 py-3 text-start font-semibold text-muted-foreground w-10 border-e border-border/30">
-                  <span className="sr-only">{t("table.expandSr")}</span>
-                </th>
-                <th className="h-12 px-3 py-3 text-start font-bold text-foreground border-e border-border/30 min-w-[130px] sm:min-w-[150px]">
-                  {t("tableColumns.name")}
-                </th>
-                <th className="h-12 px-3 py-3 text-start font-semibold text-muted-foreground border-e border-border/30">
-                  {t("tableColumns.ownership")}
-                </th>
-                <th className="h-12 px-3 py-3 text-start font-semibold text-muted-foreground border-e border-border/30">
-                  {t("tableColumns.type")}
-                </th>
-                <th className="h-12 px-3 py-3 text-start font-semibold text-muted-foreground text-xs border-e border-border/30">
-                  {t("tableColumns.company")}
-                </th>
-                <th className="h-12 px-3 py-3 text-end font-semibold text-muted-foreground border-e border-border/30">
-                  {t("tableColumns.currentBalance")}
-                </th>
-                <th className="h-12 px-3 py-3 text-end font-semibold text-muted-foreground border-e border-border/30">
-                  {t("tableColumns.monthlyContribution")}
-                </th>
-                <th className="h-12 px-3 py-3 text-end font-semibold text-muted-foreground text-xs border-e border-border/30">
-                  {t("tableColumns.accumulationFee")}
-                </th>
-                <th className="h-12 px-3 py-3 text-end font-semibold text-asset border-e border-border/30">
-                  {t("tableColumns.last5YearReturn")}
-                </th>
-                <th className="h-12 px-3 py-3 text-end font-semibold text-goal border-e border-border/30">
-                  {t("tableColumns.in1Year")}
-                </th>
-                <th className="h-12 px-3 py-3 text-end font-semibold text-goal border-e border-border/30">
-                  {t("tableColumns.in5Years")}
-                </th>
-                <th className="h-12 px-3 py-3 text-end font-semibold text-goal border-e border-border/30">
-                  {t("tableColumns.in10Years")}
-                </th>
-                <th className="h-12 px-3 py-3 text-end font-bold text-networth ps-4 border-s-2 border-networth/40">
-                  {t.rich("tableColumns.inCustomYears", { years: customYears })}
-                </th>
-                <th className="h-12 px-3 py-3 text-center font-semibold text-muted-foreground w-12">
-                  <span className="sr-only">{t("table.actionsSr")}</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              <SortableContext
-                items={investments.map((inv) => inv.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {investments.map((investment, idx) => (
-                  <InvestmentRow
-                    key={investment.id}
-                    investment={investment}
-                    isFirst={idx === 0}
-                    isLast={idx === investments.length - 1}
-                    expandedId={expandedId}
-                    idx={idx}
-                    typeLabels={typeLabels}
-                    projections={projections}
-                    customYears={customYears}
-                    onToggleExpand={handleToggleExpand}
-                    onEditClick={onEditClick}
-                    onDeleteClick={onDeleteClick}
-                    onMoveUp={handleMoveUp}
-                    onMoveDown={handleMoveDown}
-                  />
-                ))}
-              </SortableContext>
-            </tbody>
-            <tfoot>
-              <tr className="bg-emerald-50/60 border-t-4 border-emerald-300/70 font-bold">
-                <td className="h-12 px-2 py-3 border-e border-border/15" />
-                <td className="h-12 px-3 py-3 border-e border-border/15" />
-                <td className="h-12 px-3 py-3 text-start text-emerald-900 border-e border-border/15">
-                  <span className="inline-flex items-center gap-1">
-                    {t("table.totalsLabel")}
-                    <span
-                      title={t("table.projectionZeroReturnTitle")}
-                      aria-label={t("table.projectionZeroReturnTitle")}
-                      className="inline-flex"
-                    >
-                      <Info className="h-3.5 w-3.5 shrink-0 text-emerald-700/70" aria-hidden="true" />
-                    </span>
-                  </span>
-                </td>
-                <td className="h-12 px-3 py-3 border-e border-border/15" />
-                <td className="h-12 px-3 py-3 border-e border-border/15" />
-                <td className="h-12 px-3 py-3 border-e border-border/15" />
-                <td className="h-12 px-3 py-3 text-end font-mono text-asset border-e border-border/15">
-                  {formatCurrency(totals.currentBalance)}
-                </td>
-                <td className="h-12 px-3 py-3 border-e border-border/15" />
-                <td className="h-12 px-3 py-3 border-e border-border/15" />
-                <td className="h-12 px-3 py-3 border-e border-border/15" />
-                <td className="h-12 px-3 py-3 text-end font-mono text-goal border-e border-border/15">
-                  {formatCurrency(totals.in1Year)}
-                </td>
-                <td className="h-12 px-3 py-3 text-end font-mono text-goal border-e border-border/15">
-                  {formatCurrency(totals.in5Years)}
-                </td>
-                <td className="h-12 px-3 py-3 text-end font-mono text-goal border-e border-border/15">
-                  {formatCurrency(totals.in10Years)}
-                </td>
-                <td className="h-12 px-3 py-3 text-end font-mono text-networth ps-4 border-s-2 border-networth/40">
-                  {formatCurrency(totals.customYears)}
-                </td>
-                <td className="h-12 px-3 py-3" />
-              </tr>
-            </tfoot>
-          </table>
-        </DndContext>
-      </div>
+    <div className="overflow-x-auto">
+      <DndContext
+        id={`managed-savings-holdings-${groupId}`}
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr className="bg-secondary/40 border-b-2 border-border/80">
+              <th className="h-12 px-2 py-3 text-center font-semibold text-muted-foreground w-12 border-e border-border/30">
+                <span className="sr-only">{t("table.reorderColumnSr")}</span>
+              </th>
+              <th className="h-12 px-3 py-3 text-start font-semibold text-muted-foreground w-10 border-e border-border/30">
+                <span className="sr-only">{t("table.expandSr")}</span>
+              </th>
+              <th className="h-12 px-3 py-3 text-start font-bold text-foreground border-e border-border/30 min-w-[130px] sm:min-w-[150px]">
+                {t("tableColumns.name")}
+              </th>
+              <th className="h-12 px-3 py-3 text-start font-semibold text-muted-foreground border-e border-border/30">
+                {t("tableColumns.ownership")}
+              </th>
+              <th className="h-12 px-3 py-3 text-start font-semibold text-muted-foreground border-e border-border/30">
+                {t("tableColumns.type")}
+              </th>
+              <th className="h-12 px-3 py-3 text-start font-semibold text-muted-foreground text-xs border-e border-border/30">
+                {t("tableColumns.company")}
+              </th>
+              <th className="h-12 px-3 py-3 text-end font-semibold text-muted-foreground border-e border-border/30">
+                {t("tableColumns.currentBalance")}
+              </th>
+              <th className="h-12 px-3 py-3 text-end font-semibold text-muted-foreground border-e border-border/30">
+                {t("tableColumns.monthlyContribution")}
+              </th>
+              <th className="h-12 px-3 py-3 text-end font-semibold text-muted-foreground text-xs border-e border-border/30">
+                {t("tableColumns.accumulationFee")}
+              </th>
+              <th className="h-12 px-3 py-3 text-end font-semibold text-asset border-e border-border/30">
+                {t("tableColumns.last5YearReturn")}
+              </th>
+              <th className="h-12 px-3 py-3 text-end font-semibold text-goal border-e border-border/30">
+                {t("tableColumns.in1Year")}
+              </th>
+              <th className="h-12 px-3 py-3 text-end font-semibold text-goal border-e border-border/30">
+                {t("tableColumns.in5Years")}
+              </th>
+              <th className="h-12 px-3 py-3 text-end font-semibold text-goal border-e border-border/30">
+                {t("tableColumns.in10Years")}
+              </th>
+              <th className="h-12 px-3 py-3 text-end font-bold text-networth ps-4 border-s-2 border-networth/40">
+                {t.rich("tableColumns.inCustomYears", { years: customYears })}
+              </th>
+              <th className="h-12 px-3 py-3 text-center font-semibold text-muted-foreground w-12">
+                <span className="sr-only">{t("table.actionsSr")}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <SortableContext
+              items={investments.map((inv) => inv.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {investments.map((investment, idx) => (
+                <InvestmentRow
+                  key={investment.id}
+                  investment={investment}
+                  isFirst={idx === 0}
+                  isLast={idx === investments.length - 1}
+                  expandedId={expandedId}
+                  idx={idx}
+                  typeLabels={typeLabels}
+                  projections={projections}
+                  customYears={customYears}
+                  onToggleExpand={handleToggleExpand}
+                  onEditClick={onEditClick}
+                  onDeleteClick={onDeleteClick}
+                  onMoveUp={handleMoveUp}
+                  onMoveDown={handleMoveDown}
+                />
+              ))}
+            </SortableContext>
+          </tbody>
+          <tfoot>
+            <ManagedSavingsGroupSummaryRow investments={investments} customYears={customYears} />
+          </tfoot>
+        </table>
+      </DndContext>
     </div>
   );
 }

@@ -746,3 +746,66 @@ Branch History:
 - Feature branch: `feature/managed-savings-summary-ordering`
 - Merged into: `master`
 - Commit: `feat: enhance managed savings ordering and projections`
+
+## Phase 2D-2A — Managed Savings Groups Foundation
+
+Status: **COMPLETED AND VERIFIED** (2026-07-12). Product Owner browser QA approved after one fix round. Committed and merged into `master`.
+
+This phase introduced user-defined groups for the Managed Savings page, built following the Phase 2D-2 planning/audit report. It is the first of three planned sub-phases (2D-2A foundation, 2D-2B move-between-groups + delete-with-transfer, 2D-2C cross-group drag-and-drop) — only 2D-2A scope was implemented.
+
+Completed:
+- **Schema**: new `ManagedSavingsGroup` model (`id`, `userId`, `name` unique per user via `@@unique([userId, name])`, `displayOrder`, timestamps). `ManagedSavingsHolding` gained a required `groupId` (FK to `ManagedSavingsGroup`, `onDelete: Restrict` — a group can never be deleted while holdings still reference it) and a required `ownershipLabel` (free-text String, trimmed, max 80 chars, replacing the fixed ownership selector). The legacy `owner` column and `OwnerLabel` enum were intentionally **not** dropped — kept in the schema for rollback safety; the live app no longer reads or writes them.
+- **Migration** (`prisma/migrations/20260712090000_add_managed_savings_groups/`): creates `ManagedSavingsGroup`, backfills one deterministic default group per user (id `default-group-${userId}`, name "כל החסכונות"/"All Holdings"), assigns **every** existing holding — active, inactive, and archived — to it without touching `displayOrder` (visible order preserved exactly), and backfills `ownershipLabel` from the legacy `owner` enum values. Verified locally: all 24 holdings in the dev DB (7 canonical seed + 17 from prior QA sessions, including archived rows) ended up with a valid `groupId`/`ownershipLabel`, all correctly bucketed into the single default group.
+- **Seed safety**: `prisma/seed.ts` gained a create-if-missing default-group step using the same deterministic id as the migration — never upserts, matching the Phase 2D-1 seed-safety precedent for `ManagedSavingsHolding`. Verified non-destructive: re-running seed against an already-migrated DB reported the group as "already exists — left untouched" and all 8 canonical holdings as skipped.
+- **Server actions**: new `src/lib/actions/managed-savings-group-actions.ts` — `createManagedSavingsGroup`, `renameManagedSavingsGroup` (both reject duplicate names with a closed `duplicate_name` error), `reorderManagedSavingsGroups`, `deleteEmptyManagedSavingsGroup` (rejects with `group_not_empty` if the group has any holdings of any status — deleting a non-empty group with a transfer flow is Phase 2D-2B, not implemented here). `createManagedSavingsHolding`/`updateManagedSavingsHolding` now require and ownership-check `groupId`; changing a holding's group on update appends it to the end of the target group.
+- **UI**: the Managed Savings page renders grouped sections (`ManagedSavingsGroups` → `ManagedSavingsGroupSection` → `ManagedSavingsGroupHeader`/`ManagedSavingsGroupTable`/`ManagedSavingsGroupSummaryRow`) instead of one flat table. The former `ManagedSavingsTable` component was removed; its row-rendering logic now lives in `ManagedSavingsGroupTable`, scoped per group with its own `@dnd-kit` drag-and-drop context (same-group reorder and up/down accessibility fallback both preserved, working per group — cross-group drag-and-drop is Phase 2D-2C). Empty groups remain visible with an empty state and a group-preselected "Add holding" action. `CreateManagedSavingsGroupModal`/`RenameManagedSavingsGroupModal`/`DeleteManagedSavingsGroupModal` added. Add/Edit modals gained a required group `<select>` and a free-text ownership `<input>` (replacing the old fixed ownership `<select>` and its orphaned `ownerLabels.*`/`modal.ownership` translation keys, which were removed).
+- **Calculation**: `src/lib/managed-savings/summary.ts` gained `calculateProjectionTotals` — the single shared aggregation helper (built on the existing `projectWithAvailableReturnOrZero`) used by each group's summary row; global KPI cards and table-level totals continue to use the pre-existing `calculateTotalSummary`/`calculateManagedSavingsSummary` over the full flattened holdings list, so group and global totals are computed from the same per-holding source of truth and never diverge. The 0%-return assumption for holdings without a usable linked return is unchanged.
+- **QA fix round (same day, same branch)** — four Product Owner findings fixed before approval:
+  1. **Required-field indicators and validation**: Add/Edit holding modals and Create/Rename group modals now show a red `*` next to every required label plus a "fields marked with * are required" helper line. Submit is no longer blocked purely by a disabled button — clicking Save/Add/Create with a missing required field now shows inline field-level and form-level validation messages (new `managedSavings.validation.*` i18n keys) and blocks the server call, instead of silently doing nothing.
+  2. **Group reorder save feedback**: verified already correctly wired to the same fixed toast used by holding reorder; no separate bug found (the "missing toast" perception was a symptom of issue 3 below).
+  3. **Stale state requiring two browser refreshes (root cause found and fixed)**: every Managed Savings server action called `revalidateTag(MANAGED_SAVINGS_CACHE_TAG, {})`. Reading Next.js 16.2.9's own shipped source showed this only performs an immediate cache purge when the second argument is falsy or `{ expire: 0 }` — an empty object `{}` satisfies neither, so it silently fell back to a stale-while-revalidate-style update instead. Fixed by switching all 10 call sites (across `managed-savings-actions.ts`, `managed-savings-group-actions.ts`, and `public-fund-linking-actions.ts`) to `updateTag(MANAGED_SAVINGS_CACHE_TAG)` — the Next.js API documented specifically for immediate, read-your-own-writes cache invalidation from a Server Action. `router.refresh()` was also added to the group create/rename/reorder/delete and holding-reorder client handlers as defense-in-depth.
+  4. **Confusing top-level "Add Fund" button**: removed from the page entirely — every holding must belong to a group, so adding is now always initiated from inside a specific group ("Add holding to group"). "New Group" is unchanged. The orphaned `addFundButton` translation key was removed from both locales.
+
+Out of Scope (Not Implemented in Phase 2D-2A):
+- Cross-group drag-and-drop (Phase 2D-2C).
+- Delete-with-transfer for non-empty groups (Phase 2D-2B).
+- A dedicated "Move to group" quick action outside the Edit modal (Phase 2D-2B).
+- Dropping the legacy `owner` column or `OwnerLabel` enum.
+- Group colors, icons, or charts.
+- Family-member profiles, household accounts, invitations, or permissions.
+- Auth.js or multi-user isolation.
+- Any change to public fund sync, Data.gov.il, or projection formulas beyond the cache-invalidation fix.
+
+Automated Checks (final):
+- `npm run db:validate` — passed.
+- `npm run db:generate` — passed.
+- `npm run db:migrate:local` — passed (migration applied cleanly, no schema drift).
+- `npm run db:seed:local` — passed (non-destructive, verified).
+- `npm run lint` — passed, 0 errors/warnings.
+- `npx tsc --noEmit` — passed.
+- `npm run build` — passed (pre-existing unrelated `ENVIRONMENT_FALLBACK` warning only).
+
+Product Owner browser QA (final approval):
+- Add/Edit modal required-field markers and validation messages verified.
+- Create/Rename group modal validation verified.
+- Group reorder: success toast appears, order correct after one refresh.
+- Holding row reorder within a group: success toast appears, order correct after one refresh.
+- Group rename: new name correct after one refresh.
+- Top-level Add Fund button confirmed removed; group-level "Add holding to group" confirmed still working.
+- English route (`/en/managed-savings`) verified — required markers/messages render correctly, no layout regression.
+
+Product boundary confirmed:
+- Groups are fully user-defined — never derived from product type, ownership, managing company, or GemelNet classification.
+- Ownership free text is stored and displayed verbatim, never translated.
+- No AUM display, no advisory wording, no Data.gov.il calls introduced by this phase.
+
+Known Deferred Items (carried forward):
+- Phase 2D-2B (move-between-groups without drag-and-drop, delete-with-transfer for non-empty groups) and Phase 2D-2C (cross-group drag-and-drop) — not started, no scope defined yet.
+- Legacy `owner`/`OwnerLabel` column/enum remain in the schema, unused by the live app — dropping them is a future follow-up once the free-text field has been in production use.
+- Default group name ("כל החסכונות") is not locale-translated on `/en/*` routes — free-text group names are user data, never translated by design; this is expected but worth noting for future UX polish.
+- No automated tests added — consistent with the rest of the repo, which has no Vitest/Playwright infrastructure yet.
+
+Branch History:
+- Feature branch: `feature/managed-savings-groups-foundation`
+- Merged into: `master`
+- Commit: `feat: add managed savings groups foundation`
