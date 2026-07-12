@@ -16,6 +16,7 @@ Treat the following as sensitive:
 - Imported statements
 - User identity
 - Managed savings balances and notes (Phase 2B+)
+- Managed savings group names and free-text ownership labels (Phase 2D-2A) — personal financial categorization, treated with the same sensitivity as balances/notes: not logged unnecessarily, not exposed in URLs
 
 ## Core Rules
 

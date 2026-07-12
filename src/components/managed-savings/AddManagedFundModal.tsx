@@ -10,36 +10,65 @@ import type { ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
 import type { CreateManagedSavingsInput } from "@/lib/validation/managed-savings";
 import type { PublicFundMatchCandidate } from "@/lib/public-funds/search-types";
 
+interface ManagedSavingsGroupOption {
+  id: string;
+  name: string;
+}
+
+// Static required-field marker — defined once at module scope (not as a
+// component created during render) to avoid resetting state on every render.
+const REQUIRED_MARKER = (
+  <span className="text-red-600 ms-0.5" aria-hidden="true">
+    *
+  </span>
+);
+
 interface AddManagedFundModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddSuccess: (holding: ManagedSavingsInvestment) => void;
+  groups: ManagedSavingsGroupOption[];
+  // Preselected when opened from a specific group's "Add holding" action
+  // (including an empty group's empty state). Falls back to the first group
+  // by display order when not provided.
+  defaultGroupId?: string;
 }
 
-const EMPTY_FORM: CreateManagedSavingsInput = {
-  name: "",
-  type: "gemel",
-  owner: "self",
-  currentBalance: 0,
-  monthlyContribution: 0,
-  accumulationFeePercent: 0.5,
-  depositFeePercent: 0,
-  managingCompany: "",
-  trackName: "",
-  officialFundId: "",
-  notes: "",
-};
+function buildEmptyForm(groupId: string): CreateManagedSavingsInput {
+  return {
+    name: "",
+    type: "gemel",
+    ownershipLabel: "",
+    groupId,
+    currentBalance: 0,
+    monthlyContribution: 0,
+    accumulationFeePercent: 0.5,
+    depositFeePercent: 0,
+    managingCompany: "",
+    trackName: "",
+    officialFundId: "",
+    notes: "",
+  };
+}
 
 export function AddManagedFundModal({
   isOpen,
   onClose,
   onAddSuccess,
+  groups,
+  defaultGroupId,
 }: AddManagedFundModalProps) {
   const t = useTranslations("managedSavings");
+  const tGroups = useTranslations("managedSavings.groups");
+  const tValidation = useTranslations("managedSavings.validation");
   const tLink = useTranslations("managedSavings.publicFundLinking");
   const tSource = useTranslations("managedSavings.publicFundLinking.sourceLabels");
-  const [formData, setFormData] = useState<CreateManagedSavingsInput>(EMPTY_FORM);
+  const initialGroupId = defaultGroupId ?? groups[0]?.id ?? "";
+  const [formData, setFormData] = useState<CreateManagedSavingsInput>(
+    buildEmptyForm(initialGroupId)
+  );
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [showValidation, setShowValidation] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   // Selected public fund is held locally only — nothing is linked/persisted
@@ -55,8 +84,17 @@ export function AddManagedFundModal({
     setErrorKey(null);
   };
 
+  const nameInvalid = showValidation && !formData.name.trim();
+  const ownershipInvalid = showValidation && !formData.ownershipLabel.trim();
+  const groupInvalid = showValidation && !formData.groupId;
+
   const handleAdd = () => {
     setErrorKey(null);
+    if (!formData.name.trim() || !formData.ownershipLabel.trim() || !formData.groupId) {
+      setShowValidation(true);
+      return;
+    }
+    setShowValidation(false);
     startTransition(async () => {
       const payload: CreateManagedSavingsInput = {
         ...formData,
@@ -68,9 +106,11 @@ export function AddManagedFundModal({
       };
       const result = await createManagedSavingsHolding(payload);
       if (result.ok) {
-        setFormData(EMPTY_FORM);
+        setFormData(buildEmptyForm(initialGroupId));
         setSelectedFund(null);
         onAddSuccess(result.holding);
+      } else if (result.error === "invalid_group") {
+        setErrorKey("groups.invalidGroupSelection");
       } else {
         setErrorKey("errors.createFailed");
       }
@@ -81,6 +121,8 @@ export function AddManagedFundModal({
 
   const fieldClass =
     "w-full h-11 px-3.5 text-sm rounded-xl border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-asset/40 focus:border-asset hover:border-slate-400 transition-colors";
+  const fieldErrorClass =
+    "w-full h-11 px-3.5 text-sm rounded-xl border border-red-400 bg-red-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-500 transition-colors";
   const labelClass =
     "text-xs font-bold text-slate-700 mb-1.5 block uppercase tracking-wide";
 
@@ -110,6 +152,9 @@ export function AddManagedFundModal({
               <p className="text-sm text-slate-500 ms-[52px]">
                 {t("modal.addSubtitle")}
               </p>
+              <p className="text-xs text-slate-400 ms-[52px] mt-1">
+                {tValidation("requiredFieldsHelper")}
+              </p>
             </div>
             <button
               onClick={onClose}
@@ -134,17 +179,29 @@ export function AddManagedFundModal({
             <div className={secBody}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass}>{t("tableColumns.name")}</label>
+                  <label className={labelClass}>
+                    {t("tableColumns.name")}
+                    {REQUIRED_MARKER}
+                  </label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => handleChange("name", e.target.value)}
-                    className={fieldClass}
+                    onBlur={() => setShowValidation(true)}
+                    className={nameInvalid ? fieldErrorClass : fieldClass}
                     placeholder={t("modal.investmentNamePlaceholder")}
+                    aria-required="true"
+                    aria-invalid={nameInvalid}
                   />
+                  {nameInvalid && (
+                    <p className="text-xs text-red-600 mt-1">{tValidation("fieldRequired")}</p>
+                  )}
                 </div>
                 <div>
-                  <label className={labelClass}>{t("tableColumns.type")}</label>
+                  <label className={labelClass}>
+                    {t("tableColumns.type")}
+                    {REQUIRED_MARKER}
+                  </label>
                   <select
                     value={formData.type}
                     onChange={(e) =>
@@ -160,21 +217,47 @@ export function AddManagedFundModal({
                   </select>
                 </div>
                 <div>
-                  <label className={labelClass}>{t("modal.ownership")}</label>
+                  <label className={labelClass}>
+                    {tGroups("groupSelectorLabel")}
+                    {REQUIRED_MARKER}
+                  </label>
                   <select
-                    value={formData.owner}
-                    onChange={(e) =>
-                      handleChange("owner", e.target.value as CreateManagedSavingsInput["owner"])
-                    }
-                    className={fieldClass}
+                    value={formData.groupId}
+                    onChange={(e) => handleChange("groupId", e.target.value)}
+                    onBlur={() => setShowValidation(true)}
+                    className={groupInvalid ? fieldErrorClass : fieldClass}
+                    aria-required="true"
+                    aria-invalid={groupInvalid}
                   >
-                    <option value="self">{t("ownerLabels.self")}</option>
-                    <option value="spouse">{t("ownerLabels.spouse")}</option>
-                    <option value="child">{t("ownerLabels.child")}</option>
-                    <option value="shared">{t("ownerLabels.shared")}</option>
-                    <option value="family">{t("ownerLabels.family")}</option>
-                    <option value="other">{t("ownerLabels.other")}</option>
+                    {groups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
                   </select>
+                  {groupInvalid && (
+                    <p className="text-xs text-red-600 mt-1">{tValidation("fieldRequired")}</p>
+                  )}
+                </div>
+                <div>
+                  <label className={labelClass}>
+                    {tGroups("ownershipLabel")}
+                    {REQUIRED_MARKER}
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.ownershipLabel}
+                    onChange={(e) => handleChange("ownershipLabel", e.target.value)}
+                    onBlur={() => setShowValidation(true)}
+                    className={ownershipInvalid ? fieldErrorClass : fieldClass}
+                    placeholder={tGroups("ownershipPlaceholder")}
+                    maxLength={80}
+                    aria-required="true"
+                    aria-invalid={ownershipInvalid}
+                  />
+                  {ownershipInvalid && (
+                    <p className="text-xs text-red-600 mt-1">{tValidation("fieldRequired")}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -225,7 +308,10 @@ export function AddManagedFundModal({
             <div className={secBody}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass}>{t("tableColumns.currentBalance")}</label>
+                  <label className={labelClass}>
+                    {t("tableColumns.currentBalance")}
+                    {REQUIRED_MARKER}
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -236,7 +322,10 @@ export function AddManagedFundModal({
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>{t("tableColumns.monthlyContribution")}</label>
+                  <label className={labelClass}>
+                    {t("tableColumns.monthlyContribution")}
+                    {REQUIRED_MARKER}
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -415,11 +504,20 @@ export function AddManagedFundModal({
             <p className="text-xs text-blue-800">{t("modal.mockDataNote")}</p>
           </div>
 
+          {/* Validation summary — shown when a submit attempt found missing required fields */}
+          {(nameInvalid || ownershipInvalid || groupInvalid) && (
+            <div className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3">
+              <p className="text-xs text-red-700 font-medium">
+                {tValidation("formHasErrors")}
+              </p>
+            </div>
+          )}
+
           {/* Error */}
           {errorKey && (
             <div className="rounded-2xl bg-red-50 border border-red-200 px-4 py-3">
               <p className="text-xs text-red-700 font-medium">
-                {t(errorKey as "errors.createFailed")}
+                {t(errorKey as "errors.createFailed" | "groups.invalidGroupSelection")}
               </p>
             </div>
           )}
@@ -436,7 +534,7 @@ export function AddManagedFundModal({
           </button>
           <button
             onClick={handleAdd}
-            disabled={isPending || !formData.name.trim()}
+            disabled={isPending}
             className="px-5 py-2.5 text-sm font-bold text-white bg-asset rounded-xl hover:bg-asset/85 active:scale-95 transition-all shadow-md hover:shadow-lg disabled:opacity-50"
           >
             {isPending ? t("modal.adding") : t("modal.add")}

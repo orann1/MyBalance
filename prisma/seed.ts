@@ -27,6 +27,32 @@ async function main() {
   });
 
   console.log(`Dev user ready: ${user.id} (${user.email})`);
+  console.log("Seeding default managed savings group...");
+
+  // Deterministic id matching the Phase 2D-2A migration's data backfill
+  // (prisma/migrations/20260712090000_add_managed_savings_groups). Create-if-
+  // missing only — a fresh local DB seeded before the migration's backfill
+  // ran (e.g. a brand-new clone) still ends up with a valid default group,
+  // without ever overwriting a group the user has since renamed.
+  const defaultGroupId = `default-group-${user.id}`;
+  const existingDefaultGroup = await prisma.managedSavingsGroup.findUnique({
+    where: { id: defaultGroupId },
+    select: { id: true },
+  });
+  if (existingDefaultGroup) {
+    console.log("  Default group already exists — left untouched.");
+  } else {
+    await prisma.managedSavingsGroup.create({
+      data: {
+        id: defaultGroupId,
+        userId: user.id,
+        name: "כל החסכונות",
+        displayOrder: 1,
+      },
+    });
+    console.log(`  Created default group: ${defaultGroupId}`);
+  }
+
   console.log("Seeding managed savings holdings...");
 
   // Holdings are seeded with stable IDs matching the mock data ids.
@@ -40,9 +66,11 @@ async function main() {
     {
       id: "hist-001",
       userId: user.id,
+      groupId: defaultGroupId,
       name: "קרן השתלמות שלי",
       type: ManagedSavingsType.hishtalmut,
       owner: OwnerLabel.self,
+      ownershipLabel: "עצמי",
       status: HoldingStatus.active,
       currentBalanceMinor: toMinorUnits(285000),
       monthlyContributionMinor: toMinorUnits(650),
@@ -59,9 +87,11 @@ async function main() {
     {
       id: "hist-002",
       userId: user.id,
+      groupId: defaultGroupId,
       name: "קרן השתלמות אשתי",
       type: ManagedSavingsType.hishtalmut,
       owner: OwnerLabel.spouse,
+      ownershipLabel: "בן/בת זוג",
       status: HoldingStatus.active,
       currentBalanceMinor: toMinorUnits(265000),
       monthlyContributionMinor: toMinorUnits(600),
@@ -78,9 +108,11 @@ async function main() {
     {
       id: "gemel-001",
       userId: user.id,
+      groupId: defaultGroupId,
       name: "קופת גמל - ילד 1",
       type: ManagedSavingsType.gemel,
       owner: OwnerLabel.child,
+      ownershipLabel: "ילד/ה",
       status: HoldingStatus.active,
       currentBalanceMinor: toMinorUnits(75000),
       monthlyContributionMinor: toMinorUnits(200),
@@ -97,9 +129,11 @@ async function main() {
     {
       id: "gemel-002",
       userId: user.id,
+      groupId: defaultGroupId,
       name: "קופת גמל - ילד 2",
       type: ManagedSavingsType.gemel,
       owner: OwnerLabel.child,
+      ownershipLabel: "ילד/ה",
       status: HoldingStatus.active,
       currentBalanceMinor: toMinorUnits(68000),
       monthlyContributionMinor: toMinorUnits(175),
@@ -116,9 +150,11 @@ async function main() {
     {
       id: "hash-001",
       userId: user.id,
+      groupId: defaultGroupId,
       name: "גמל להשקעה משפחתי",
       type: ManagedSavingsType.hashkaa,
       owner: OwnerLabel.shared,
+      ownershipLabel: "משותף",
       status: HoldingStatus.active,
       currentBalanceMinor: toMinorUnits(145000),
       monthlyContributionMinor: toMinorUnits(400),
@@ -135,9 +171,11 @@ async function main() {
     {
       id: "save-001",
       userId: user.id,
+      groupId: defaultGroupId,
       name: "פוליסת חיסכון ילדים",
       type: ManagedSavingsType.savings,
       owner: OwnerLabel.family,
+      ownershipLabel: "משפחה",
       status: HoldingStatus.active,
       currentBalanceMinor: toMinorUnits(92000),
       monthlyContributionMinor: toMinorUnits(400),
@@ -154,9 +192,11 @@ async function main() {
     {
       id: "gemel-003",
       userId: user.id,
+      groupId: defaultGroupId,
       name: "קופת גמל שלי",
       type: ManagedSavingsType.gemel,
       owner: OwnerLabel.self,
+      ownershipLabel: "עצמי",
       status: HoldingStatus.active,
       currentBalanceMinor: toMinorUnits(125000),
       monthlyContributionMinor: toMinorUnits(350),
@@ -173,9 +213,11 @@ async function main() {
     {
       id: "save-002",
       userId: user.id,
+      groupId: defaultGroupId,
       name: "חיסכון מנוהל משותף",
       type: ManagedSavingsType.savings,
       owner: OwnerLabel.shared,
+      ownershipLabel: "משותף",
       status: HoldingStatus.active,
       currentBalanceMinor: toMinorUnits(85000),
       monthlyContributionMinor: toMinorUnits(300),

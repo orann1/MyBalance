@@ -105,9 +105,11 @@ Planned fields:
 - userId
 - name
 - type (ManagedSavingsType enum)
-- owner (OwnerLabel enum)
+- owner (OwnerLabel enum). **Legacy as of Phase 2D-2A** — kept in the schema for migration/rollback safety only. The live application no longer reads or writes this field; see `ownershipLabel` below.
+- ownershipLabel (String, required. **Added in Phase 2D-2A.** Free-text ownership label, e.g. "אורן", "משותף", "Maya" — trimmed, max 80 chars. Replaces the fixed `owner` enum as the live ownership field. Distinct from group membership. Never translated — stored and displayed verbatim.)
+- groupId (String, required FK to `ManagedSavingsGroup`. **Added in Phase 2D-2A.** Every holding — active, inactive, or archived — belongs to exactly one user-defined group. `onDelete: Restrict` — a group can never be deleted while holdings still reference it.)
 - status (HoldingStatus enum)
-- displayOrder (Int — user-controlled row order, Phase 2D-1. Lower values render first. Indexed via `@@index([userId, displayOrder])`. Backfilled from `createdAt` ascending on introduction so existing holdings did not visibly reshuffle; new holdings are appended via `max(existing active displayOrder for user) + 1`. Persisted by the `reorderManagedSavingsHoldings` server action.)
+- displayOrder (Int — user-controlled row order, Phase 2D-1. Lower values render first. Indexed via `@@index([userId, displayOrder])` and, as of Phase 2D-2A, `@@index([userId, groupId, displayOrder])`. Backfilled from `createdAt` ascending on introduction so existing holdings did not visibly reshuffle; new holdings are appended via `max(existing active displayOrder for user/group) + 1`. Persisted by the `reorderManagedSavingsHoldings` server action. As of Phase 2D-2A, values are only ever compared among holdings sharing the same `groupId` — cross-group displayOrder collisions are harmless.)
 - currentBalanceMinor (BigInt — agorot)
 - monthlyContributionMinor (BigInt — agorot)
 - currency (default: ILS)
@@ -121,6 +123,22 @@ Planned fields:
 - notes (optional — personal, user-owned, displayed in expanded row only)
 - createdAt
 - updatedAt
+
+### ManagedSavingsGroup
+
+User-defined grouping of Managed Savings holdings. **Added in Phase 2D-2A.** Groups are fully user-defined — never derived from product type, ownership, managing company, or any `PublicFund`/GemelNet classification. Every holding belongs to exactly one group; a group may be empty.
+
+Fields:
+- id
+- userId (FK to `User`)
+- name (String, required, trimmed, max 60 chars. Unique per user — `@@unique([userId, name])`, case-sensitive.)
+- displayOrder (Int — user-controlled group order, same pattern as `ManagedSavingsHolding.displayOrder`.)
+- createdAt
+- updatedAt
+
+Constraints: `@@unique([userId, name])`, `@@index([userId, displayOrder])`. Reverse relation: `holdings ManagedSavingsHolding[]`.
+
+Deletion (Phase 2D-2A scope): `deleteEmptyManagedSavingsGroup` only deletes a group with zero holdings (any status). Deleting a non-empty group with a transfer-destination flow is planned for a later sub-phase (Phase 2D-2B) — not implemented yet.
 
 ### PublicFund
 
@@ -295,7 +313,9 @@ Product type for a managed savings holding:
 
 ### OwnerLabel
 
-Ownership label for a holding:
+**Legacy as of Phase 2D-2A.** Kept in the schema (and the `ManagedSavingsHolding.owner` column) for migration/rollback safety only — the live application no longer reads or writes this field. Ownership is now a free-text field (`ManagedSavingsHolding.ownershipLabel`, String). This enum and column are intentionally not dropped in Phase 2D-2A; dropping them is a deferred follow-up once the free-text field has been in production use.
+
+Legacy values:
 
 - `self`
 - `spouse`
@@ -457,6 +477,53 @@ The projection calculation described above (`getEffectiveAnnualReturn`/`projectS
 - `projectWithAvailableReturnOrZero(investment, years): Record<number, SimulationYear>` — always returns a result (never `null`). Linked holdings use the existing fee-adjusted compounding formula unchanged. Holdings with no linked return use a separate zero-return path (`runZeroReturnProjection`) that returns `currentBalance + monthlyContribution × months` with no fee applied — this guarantees a 0-contribution unlinked holding projects to exactly its current balance at every horizon, and avoids a division-by-zero in the compounding formula's annuity term when the effective rate is exactly 0.
 
 `calculateTotalSummary` (feeding the top KPI cards, the table totals row, and the legacy `ManagedSavingsSummaryTable`) now calls `projectWithAvailableReturnOrZero`, so every active holding contributes to these totals — holdings without a linked return contribute their 0%-assumption value, never an exclusion. `getEffectiveAnnualReturn`/`projectSimulations` remain in the file for potential future mock/demo use but are no longer called by any live display path.
+
+## Phase 2D-2A Implementation Notes (2026-07-12)
+
+Adds `ManagedSavingsGroup` (see model definition above) and two new fields on `ManagedSavingsHolding`: `groupId` (required FK, `onDelete: Restrict`) and `ownershipLabel` (required String, free text). The legacy `owner` enum column and `OwnerLabel` enum type are intentionally **not** dropped in this phase.
+
+Migration: `prisma/migrations/20260712090000_add_managed_savings_groups/`.
+
+```sql
+CREATE TABLE "ManagedSavingsGroup" ( ... );
+CREATE UNIQUE INDEX "ManagedSavingsGroup_userId_name_key" ON "ManagedSavingsGroup"("userId", "name");
+CREATE INDEX "ManagedSavingsGroup_userId_displayOrder_idx" ON "ManagedSavingsGroup"("userId", "displayOrder");
+ALTER TABLE "ManagedSavingsGroup" ADD CONSTRAINT "ManagedSavingsGroup_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- One default group per user with existing holdings — never inferred from ownership.
+INSERT INTO "ManagedSavingsGroup" ("id", "userId", "name", "displayOrder", "createdAt", "updatedAt")
+SELECT 'default-group-' || u."userId", u."userId", 'כל החסכונות', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+FROM (SELECT DISTINCT "userId" FROM "ManagedSavingsHolding") u;
+
+ALTER TABLE "ManagedSavingsHolding" ADD COLUMN "groupId" TEXT;
+UPDATE "ManagedSavingsHolding" SET "groupId" = 'default-group-' || "userId";
+ALTER TABLE "ManagedSavingsHolding" ALTER COLUMN "groupId" SET NOT NULL;
+CREATE INDEX "ManagedSavingsHolding_groupId_idx" ON "ManagedSavingsHolding"("groupId");
+CREATE INDEX "ManagedSavingsHolding_userId_groupId_displayOrder_idx" ON "ManagedSavingsHolding"("userId", "groupId", "displayOrder");
+ALTER TABLE "ManagedSavingsHolding" ADD CONSTRAINT "ManagedSavingsHolding_groupId_fkey" FOREIGN KEY ("groupId") REFERENCES "ManagedSavingsGroup"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "ManagedSavingsHolding" ADD COLUMN "ownershipLabel" TEXT;
+UPDATE "ManagedSavingsHolding" SET "ownershipLabel" = CASE "owner"
+  WHEN 'self' THEN 'עצמי' WHEN 'spouse' THEN 'בן/בת זוג' WHEN 'child' THEN 'ילד/ה'
+  WHEN 'shared' THEN 'משותף' WHEN 'family' THEN 'משפחה' WHEN 'other' THEN 'אחר' END;
+ALTER TABLE "ManagedSavingsHolding" ALTER COLUMN "ownershipLabel" SET NOT NULL;
+```
+
+Every existing holding — active, inactive, and archived — was backfilled into a single deterministic default group per user (id `default-group-${userId}`, name "כל החסכונות"). Existing `displayOrder` values were not touched, so visible order was preserved exactly. Verified locally after migration: 24 holdings (7 active canonical + 17 archived from prior QA sessions), all with a valid `groupId` and `ownershipLabel`, all in the single default group.
+
+`prisma/seed.ts` gained a create-if-missing default-group seeding step (same deterministic id as the migration) so a fresh local DB ends up correct even if seeded before the migration's data backfill ran. Never upserts — matches the existing Phase 2D-1 seed-safety precedent for `ManagedSavingsHolding`.
+
+Data layer: `src/lib/data/managed-savings.ts` adds `getManagedSavingsGroupsForCurrentDevUser` (cached, same `MANAGED_SAVINGS_CACHE_TAG`), returning each group with its active holdings, both sorted `displayOrder asc, createdAt asc`. Holdings are bucketed by `groupId` from the existing flat active-holdings query — `displayOrder` is only ever compared among holdings sharing the same `groupId`, so cross-group `displayOrder` collisions are harmless.
+
+Server actions: `src/lib/actions/managed-savings-group-actions.ts` (new) — `createManagedSavingsGroup`, `renameManagedSavingsGroup`, `reorderManagedSavingsGroups`, `deleteEmptyManagedSavingsGroup` (rejects with `group_not_empty` if the group has any holdings — no transfer flow yet, deferred to Phase 2D-2B). `createManagedSavingsHolding`/`updateManagedSavingsHolding` (`src/lib/actions/managed-savings-actions.ts`) now require and validate `groupId` (ownership-checked against the dev user) and `ownershipLabel`; changing a holding's group on update appends it to the end of the target group.
+
+UI: the Managed Savings page (`ManagedSavingsPageClient`) now renders `ManagedSavingsGroups` → `ManagedSavingsGroupSection` (one per group, each with its own `ManagedSavingsGroupHeader`, `ManagedSavingsGroupTable`, and `ManagedSavingsGroupSummaryRow`) instead of a single flat table. The former `ManagedSavingsTable` component was removed and its row-rendering logic carried into `ManagedSavingsGroupTable`, scoped per group with its own `@dnd-kit` `DndContext`/`SortableContext` (same-group reorder only — cross-group drag-and-drop is Phase 2D-2C). Empty groups remain visible with an empty state and an "Add holding" action that preselects that group. Add/Edit modals gained a required group `<select>` and replaced the old fixed ownership `<select>` with a free-text input. `src/lib/managed-savings/summary.ts` gained `calculateProjectionTotals` — the single shared aggregation helper used by both the per-group summary row and (indirectly, via the same underlying `projectWithAvailableReturnOrZero`) the global totals, so group and global totals never diverge.
+
+Non-scope confirmed: no cross-group drag-and-drop, no delete-with-transfer for non-empty groups, no dedicated "Move to group" quick action outside Edit, no group colors/icons/charts, no family-member profiles, no Auth.js. The legacy `owner`/`OwnerLabel` enum column/type were intentionally not dropped.
+
+### Phase 2D-2A QA fix round (2026-07-12) — cache invalidation correction
+
+All Managed Savings server actions (`managed-savings-actions.ts`, `managed-savings-group-actions.ts`, `public-fund-linking-actions.ts`) previously called `revalidateTag(MANAGED_SAVINGS_CACHE_TAG, {})` after every mutation. This caused saved changes (group rename/reorder, holding reorder) to sometimes require two browser refreshes before appearing — Next.js 16's `revalidateTag(tag, profile)` only performs an immediate cache purge when `profile` is falsy or `profile.expire === 0`; an empty object profile is neither, so it fell back to a stale-while-revalidate-style update. All call sites now use `updateTag(MANAGED_SAVINGS_CACHE_TAG)` instead — the Next.js-documented API for immediate, read-your-own-writes cache invalidation from within a Server Action. `unstable_cache`/the cache tag itself are unchanged; only the invalidation call changed.
 
 ## Important Notes
 

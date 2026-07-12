@@ -77,6 +77,31 @@ model User {
   updatedAt DateTime @updatedAt
 
   managedSavingsHoldings ManagedSavingsHolding[]
+  managedSavingsGroups   ManagedSavingsGroup[]
+}
+
+// User-defined grouping of Managed Savings holdings (Phase 2D-2A). Groups are
+// fully user-defined — never derived from product type, ownership, managing
+// company, or any PublicFund/GemelNet classification. Every active holding
+// belongs to exactly one group; a group may be empty.
+model ManagedSavingsGroup {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  name String
+
+  // User-controlled group display order (same pattern as
+  // ManagedSavingsHolding.displayOrder). Lower values render first.
+  displayOrder Int @default(0)
+
+  holdings ManagedSavingsHolding[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, name])
+  @@index([userId, displayOrder])
 }
 
 // Stores the user's personal managed savings holdings.
@@ -89,12 +114,31 @@ model ManagedSavingsHolding {
 
   name   String
   type   ManagedSavingsType
-  owner  OwnerLabel         @default(self)
   status HoldingStatus      @default(active)
+
+  // Legacy fixed ownership enum (Phase 2B). Superseded by the free-text
+  // `ownershipLabel` field below as of Phase 2D-2A. Intentionally NOT dropped
+  // in this phase — kept for migration/rollback safety only. The live
+  // application no longer reads or writes this field.
+  owner OwnerLabel @default(self)
+
+  // Free-text ownership label (Phase 2D-2A), e.g. "אורן", "משותף", "Maya".
+  // Required, trimmed, distinct from group membership. Replaces the fixed
+  // `owner` enum above as the live ownership field.
+  ownershipLabel String
+
+  // Every holding belongs to exactly one user-defined group (Phase 2D-2A).
+  // Restrict delete: a group can never be deleted while holdings still
+  // reference it — deletion requires an explicit transfer first (see
+  // deleteEmptyManagedSavingsGroup / group deletion in a later sub-phase).
+  groupId String
+  group   ManagedSavingsGroup @relation(fields: [groupId], references: [id], onDelete: Restrict)
 
   // User-controlled display order within the holdings table (Phase 2D-1).
   // Lower values render first. Backfilled from createdAt asc on introduction;
   // new holdings are appended (max existing + 1) by createManagedSavingsHolding.
+  // As of Phase 2D-2A, ordering is conceptually scoped within each group —
+  // values are only compared among holdings sharing the same groupId.
   displayOrder Int @default(0)
 
   // Money stored as agorot (integer minor units). Never use floats for persisted balances.
@@ -130,6 +174,8 @@ model ManagedSavingsHolding {
   @@index([userId])
   @@index([userId, status])
   @@index([userId, displayOrder])
+  @@index([groupId])
+  @@index([userId, groupId, displayOrder])
   @@index([type])
   @@index([officialFundId])
   @@index([publicFundId])

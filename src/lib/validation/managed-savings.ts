@@ -8,21 +8,27 @@ const MANAGED_SAVINGS_TYPES = [
   "other",
 ] as const;
 
-const OWNER_LABELS = [
-  "self",
-  "spouse",
-  "child",
-  "shared",
-  "family",
-  "other",
-] as const;
+// Free-text ownership label (Phase 2D-2A) — replaces the old fixed OwnerLabel
+// enum. Trimmed, required, bounded length. Distinct from group membership.
+const OWNERSHIP_LABEL_MAX_LENGTH = 80;
+const ownershipLabelField = z
+  .string()
+  .trim()
+  .min(1)
+  .max(OWNERSHIP_LABEL_MAX_LENGTH);
+
+// Group name (Phase 2D-2A). Trimmed, required, bounded length.
+const GROUP_NAME_MAX_LENGTH = 60;
+const groupNameField = z.string().trim().min(1).max(GROUP_NAME_MAX_LENGTH);
 
 // Form/UI schema: validates human-readable values (ILS amounts, percent fees).
 // Server actions convert to minor units and bps before persisting.
 const baseFields = {
   name: z.string().min(1).max(200),
   type: z.enum(MANAGED_SAVINGS_TYPES),
-  owner: z.enum(OWNER_LABELS),
+  ownershipLabel: ownershipLabelField,
+  // Every holding belongs to exactly one user-defined group (Phase 2D-2A).
+  groupId: z.string().min(1),
   // Balances: ILS major units. Upper bounds guard against obviously invalid input.
   currentBalance: z.number().min(0).max(50_000_000),
   monthlyContribution: z.number().min(0).max(500_000),
@@ -83,4 +89,43 @@ export type ArchiveManagedSavingsInput = z.infer<
 >;
 export type ReorderManagedSavingsInput = z.infer<
   typeof ReorderManagedSavingsSchema
+>;
+
+// ─── Managed Savings Groups (Phase 2D-2A) ─────────────────────────────────
+
+export const CreateManagedSavingsGroupSchema = z.object({
+  name: groupNameField,
+});
+
+export const RenameManagedSavingsGroupSchema = z.object({
+  id: z.string().min(1),
+  name: groupNameField,
+});
+
+// Same shape/rules as ReorderManagedSavingsSchema — full set of the user's
+// group ids, in the desired display order.
+export const ReorderManagedSavingsGroupsSchema = z.object({
+  orderedIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "Duplicate ids are not allowed",
+    }),
+});
+
+export const DeleteEmptyManagedSavingsGroupSchema = z.object({
+  id: z.string().min(1),
+});
+
+export type CreateManagedSavingsGroupInput = z.infer<
+  typeof CreateManagedSavingsGroupSchema
+>;
+export type RenameManagedSavingsGroupInput = z.infer<
+  typeof RenameManagedSavingsGroupSchema
+>;
+export type ReorderManagedSavingsGroupsInput = z.infer<
+  typeof ReorderManagedSavingsGroupsSchema
+>;
+export type DeleteEmptyManagedSavingsGroupInput = z.infer<
+  typeof DeleteEmptyManagedSavingsGroupSchema
 >;

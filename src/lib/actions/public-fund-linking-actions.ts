@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { getDevUserId } from "@/lib/managed-savings/dev-user";
 import { MANAGED_SAVINGS_CACHE_TAG } from "@/lib/data/managed-savings";
@@ -61,7 +61,7 @@ export async function linkManagedSavingsHoldingToPublicFund(
       ? await getLatestFundReturnSummaries([record.publicFund.id])
       : new Map();
 
-    revalidateTag(MANAGED_SAVINGS_CACHE_TAG, {});
+    updateTag(MANAGED_SAVINGS_CACHE_TAG);
     return {
       ok: true,
       holding: serializeHolding(
@@ -103,7 +103,7 @@ export async function unlinkManagedSavingsHoldingFromPublicFund(
       include: { publicFund: true },
     });
 
-    revalidateTag(MANAGED_SAVINGS_CACHE_TAG, {});
+    updateTag(MANAGED_SAVINGS_CACHE_TAG);
     return { ok: true, holding: serializeHolding(record, null) };
   } catch {
     return { ok: false, error: "server_error" };

@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidateTag } from "next/cache";
+import { updateTag } from "next/cache";
 import { prisma } from "@/lib/db/prisma";
 import { getDevUserId } from "@/lib/managed-savings/dev-user";
 import { toMinorUnits, percentToBps } from "@/lib/financial/units";
@@ -22,7 +22,10 @@ export type ActionResultWithHolding =
   | { ok: false; error: string };
 export type CreateActionResult =
   | { ok: true; holding: ManagedSavingsInvestment }
-  | { ok: false; error: "validation_failed" | "invalid_public_fund" | "create_failed" };
+  | {
+      ok: false;
+      error: "validation_failed" | "invalid_public_fund" | "invalid_group" | "create_failed";
+    };
 
 export type ReorderActionResult =
   | { ok: true; holdings: ManagedSavingsInvestment[] }
@@ -32,7 +35,11 @@ function toDbFields(input: CreateManagedSavingsInput) {
   return {
     name: input.name,
     type: input.type,
-    owner: input.owner,
+    // Free-text ownership label (Phase 2D-2A) — the legacy "owner" enum
+    // column is left untouched (keeps its default) and is no longer written
+    // here.
+    ownershipLabel: input.ownershipLabel,
+    groupId: input.groupId,
     currency: "ILS",
     currentBalanceMinor: toMinorUnits(input.currentBalance),
     monthlyContributionMinor: toMinorUnits(input.monthlyContribution),
@@ -58,6 +65,16 @@ export async function createManagedSavingsHolding(
   try {
     const userId = await getDevUserId();
 
+    // The target group must exist and belong to the dev user — never
+    // trusted from the client as-is.
+    const group = await prisma.managedSavingsGroup.findFirst({
+      where: { id: parsed.data.groupId, userId },
+      select: { id: true },
+    });
+    if (!group) {
+      return { ok: false, error: "invalid_group" };
+    }
+
     // Optional initial public fund link — the user explicitly selected this
     // fund in the Add modal's matching UI before saving (never auto-linked).
     // Verified here rather than trusted from the client: must be an existing
@@ -76,9 +93,11 @@ export async function createManagedSavingsHolding(
     }
 
     const record = await prisma.$transaction(async (tx) => {
-      // New holdings are appended to the end of the user's active list.
+      // New holdings are appended to the end of their target group's active
+      // list — displayOrder is only ever compared among holdings sharing the
+      // same groupId (Phase 2D-2A).
       const last = await tx.managedSavingsHolding.findFirst({
-        where: { userId, status: { not: "archived" } },
+        where: { userId, groupId: parsed.data.groupId, status: { not: "archived" } },
         orderBy: { displayOrder: "desc" },
         select: { displayOrder: true },
       });
@@ -100,7 +119,7 @@ export async function createManagedSavingsHolding(
       ? await getLatestFundReturnSummaries([record.publicFund.id])
       : new Map();
 
-    revalidateTag(MANAGED_SAVINGS_CACHE_TAG, {});
+    updateTag(MANAGED_SAVINGS_CACHE_TAG);
     return {
       ok: true,
       holding: serializeHolding(
@@ -126,23 +145,46 @@ export async function updateManagedSavingsHolding(
     // Ownership check: the holding must belong to the dev user.
     const existing = await prisma.managedSavingsHolding.findFirst({
       where: { id: parsed.data.id, userId },
-      select: { id: true },
+      select: { id: true, groupId: true },
     });
     if (!existing) {
       return { ok: false, error: "not_found" };
+    }
+
+    // The target group must exist and belong to the dev user.
+    const group = await prisma.managedSavingsGroup.findFirst({
+      where: { id: parsed.data.groupId, userId },
+      select: { id: true },
+    });
+    if (!group) {
+      return { ok: false, error: "invalid_group" };
+    }
+
+    // If the group changed, append the holding to the end of the target
+    // group's active list (Phase 2D-2A — positioned cross-group moves are a
+    // later sub-phase). If the group is unchanged, displayOrder is left as-is
+    // so an in-group edit never disturbs its position.
+    let displayOrderOverride: { displayOrder: number } | Record<string, never> = {};
+    if (existing.groupId !== parsed.data.groupId) {
+      const last = await prisma.managedSavingsHolding.findFirst({
+        where: { userId, groupId: parsed.data.groupId, status: { not: "archived" } },
+        orderBy: { displayOrder: "desc" },
+        select: { displayOrder: true },
+      });
+      displayOrderOverride = { displayOrder: (last?.displayOrder ?? 0) + 1 };
     }
 
     const record = await prisma.managedSavingsHolding.update({
       where: { id: parsed.data.id },
       // publicFundId is intentionally not in toDbFields — edit/add does not
       // touch the public fund link; linking/unlinking is a separate action.
-      data: toDbFields(parsed.data),
+      data: { ...toDbFields(parsed.data), ...displayOrderOverride },
       include: { publicFund: true },
     });
     const latestSummaries = record.publicFund
       ? await getLatestFundReturnSummaries([record.publicFund.id])
       : new Map();
-    revalidateTag(MANAGED_SAVINGS_CACHE_TAG, {});
+    updateTag(MANAGED_SAVINGS_CACHE_TAG);
     return {
       ok: true,
       holding: serializeHolding(
@@ -179,7 +221,7 @@ export async function archiveManagedSavingsHolding(
       where: { id: parsed.data.id },
       data: { status: "archived" },
     });
-    revalidateTag(MANAGED_SAVINGS_CACHE_TAG, {});
+    updateTag(MANAGED_SAVINGS_CACHE_TAG);
     return { ok: true };
   } catch {
     return { ok: false, error: "archive_failed" };
@@ -229,7 +271,7 @@ export async function reorderManagedSavingsHoldings(
       )
     );
 
-    revalidateTag(MANAGED_SAVINGS_CACHE_TAG, {});
+    updateTag(MANAGED_SAVINGS_CACHE_TAG);
 
     // Return the authoritative, re-sorted active holdings so the client can
     // reconcile optimistic UI state against the server's persisted order.
