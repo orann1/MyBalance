@@ -809,3 +809,57 @@ Branch History:
 - Feature branch: `feature/managed-savings-groups-foundation`
 - Merged into: `master`
 - Commit: `feat: add managed savings groups foundation`
+
+## Phase 2E-1 — Similar Tracks Comparison Core
+
+Status: **COMPLETED AND VERIFIED** (2026-07-13). Product Owner browser QA approved after two focused fix rounds. Committed and merged into `master`.
+
+This phase added the first real fund/track comparison feature to the Managed Savings page, built following a dedicated Phase 2E audit/planning report. It compares a linked holding's GemelNet fund against similar tracks using data already stored as of Phase 2C-1 — no schema changes, no new Prisma migrations, no Sharpe/Alpha/AUM/exposure/asset-composition data (explicitly out of scope, deferred to a future data-enrichment phase).
+
+Completed:
+- **Peer comparison backend** (`src/lib/public-funds/peer-comparison.ts`, new): `getPeerComparisonForPublicFund(publicFundId)` groups GemelNet funds by `fundClassification` + `subSpecialization` (strict match; falls back to `fundClassification`-only when the strict group has fewer than 5 funds; returns a safe `not_enough_peers` result when even the relaxed group has fewer than 3). Also returns `missing_classification` and `unsupported_source` (PensionNet-linked funds are out of scope for this comparison) as safe no-comparison states. Comparison is always computed at the target fund's own latest `FundReturn.reportPeriod`; peers without a return row for that exact period are excluded — no cross-period comparisons.
+- **Relevance filtering by target population**: after classification matching, peers are further filtered by `PublicFund.targetPopulation` relevance — a generic/public target fund (local data pattern: "כלל האוכלוסיה") is compared only against other generic/public peers; a sector/employer-specific target fund is compared only against peers sharing that exact population value. This was added in a QA fix round after the Product Owner found the initial peer lists too broad/irrelevant.
+- **Return/fee metrics**: last-month and 3-/5-year returns read directly from `FundReturn`; a true rolling 12-month return is computed by compounding (not summing) the last 12 monthly `FundReturn.monthlyReturn` rows via a batched SQL window-function query. Management fee falls back to the latest available 2025 value when the selected period has none. Default ranking is 5-year return descending. Display is capped to the top 10 relevant peers, with the user's own linked fund always shown (appended with its true rank) even if it falls outside that range.
+- **UI** (`src/components/managed-savings/SimilarTracksComparison.tsx`, new): renders inside the linked holding's expanded row, below the existing linked-fund performance card, for linked GemelNet holdings only — unlinked holdings and PensionNet-linked/unclassified funds show a compact neutral empty state instead of a table, never fake data. Includes a peer-group header (classification/population label, peer count, report period, strict/relaxed confidence badge), summary cards (5-year and 12-month return **gaps** vs. peer average — explicitly labelled "gap" and signed with +/- to avoid being misread as a raw return, plus the user's own annual fee with a neutral above/below/same-as-average subtext), and a comparison table (rank, fund name, last month/12-month/3-year/5-year return, avg. management fee) with the user's row visually prominent (stronger tint, border, badge) and a peer-average row. The single highest return value and lowest fee value per column are subtly highlighted.
+- **Data layer**: `src/lib/data/managed-savings.ts` computes the peer comparison once per distinct linked `PublicFund` (not per holding) during the existing cached holdings fetch, attaching it as an optional `similarTracksComparison` field on the serialized investment.
+- **i18n**: new `managedSavings.similarTracks.*` namespace in both `he.json`/`en.json` — all comparison copy, confidence/match labels, empty-state reasons, and neutral wording ("above/below/same as peer average", "informational only") sourced from translation files; no hardcoded UI text.
+
+Out of Scope (Not Implemented in Phase 2E-1):
+- Sharpe, Alpha, standard deviation — observed in the live GemelNet source but not persisted; would require a schema migration.
+- AUM display — units remain unverified/not display-approved.
+- Equity/foreign/FX exposure and asset-composition breakdowns — not available in the current GemelNet resource in a usable form.
+- Any Prisma schema changes or migrations.
+- Data.gov.il live calls (comparison is local-DB-only).
+- Managed Savings group-management work (Phase 2D-2B/2D-2C remain separately deferred, unrelated to this phase).
+
+Automated Checks (final):
+- `npm run lint` — passed, 0 errors/warnings.
+- `npx tsc --noEmit` — passed.
+- `npm run build` — passed (pre-existing unrelated `ENVIRONMENT_FALLBACK` warning only).
+- `npm run db:validate` — passed, schema unchanged.
+
+Product Owner browser QA (final approval, after two fix rounds):
+- Table relevance, top-10 cap, and the user-fund-outside-top-10 edge case verified.
+- Managing company/my-fee/fee-gap columns removed from the table; fee moved to a summary card.
+- User's own fund row confirmed clearly distinct in its true ranked position.
+- Best-value highlighting confirmed subtle, not noisy.
+- 5-year/12-month summary cards confirmed to read clearly as gaps vs. peer average, with correct +/- signs and neutral subtext.
+- Hebrew (`/managed-savings`) and English (`/en/managed-savings`) both verified, zero console errors.
+- Unlinked holdings confirmed to show no comparison table.
+
+Product boundary confirmed:
+- Comparison is local-DB-only — no personal data sent to Data.gov.il or any external service.
+- Wording is informational only ("above/below/same as peer average", "informational only") — no "recommended", "best", "you should switch/move", or "guaranteed" language anywhere.
+- Public fund returns are never presented as the user's personal return.
+- No AUM, Sharpe, Alpha, or exposure data displayed.
+
+Known Deferred Items (carried forward):
+- A future data-enrichment phase (Sharpe/Alpha/AUM/exposure investigation) was explicitly separated from this phase by the Product Lead and is not started.
+- Fund/track profile cards and asset-composition visualization (from the original Phase 2E audit's later-phase recommendations) are not implemented.
+- Managed Savings group-management work (Phase 2D-2B move-between-groups + delete-with-transfer, Phase 2D-2C cross-group drag-and-drop) remains not started, unrelated to this phase.
+- Auth.js/multi-user isolation remains future scope.
+
+Branch History:
+- Feature branch: `feature/similar-tracks-comparison`
+- Merged into: `master`
+- Commit: `feat: add similar tracks comparison`

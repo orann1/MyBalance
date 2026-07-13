@@ -450,6 +450,46 @@
         "note2": "הקישור לא משנה את היתרה, ההפקדות או ההנחות האישיות שלך.",
         "close": "סגור"
       }
+    },
+    "similarTracks": {
+      "title": "השוואה למסלולים דומים",
+      "subtitle": "מידע להשוואה בלבד, מבוסס על נתוני גמל-נט הציבוריים",
+      "peerGroup": "קבוצת השוואה",
+      "peerCount": "{count, plural, one {מסלול דומה אחד} other {{count} מסלולים דומים}}",
+      "reportPeriod": "תקופת דיווח",
+      "confidenceHigh": "רמת התאמה גבוהה",
+      "confidenceMedium": "רמת התאמה בינונית",
+      "confidenceUnavailable": "אין השוואה זמינה",
+      "matchStrict": "התאמה מדויקת — סיווג ותת-התמחות זהים",
+      "matchRelaxed": "התאמה רחבה יותר — לפי סיווג הקרן בלבד",
+      "notEnoughPeers": "אין כרגע מספיק מסלולים דומים להשוואה מהימנה.",
+      "missingClassification": "לא ניתן לסווג קרן זו להשוואה למסלולים דומים.",
+      "unsupportedSource": "השוואה למסלולים דומים זמינה כרגע רק לקרנות ממאגר גמל-נט.",
+      "notLinked": "יש לקשר קרן ציבורית כדי להציג השוואה למסלולים דומים.",
+      "summaryFiveYear": "פער תשואת 5 שנים מול ממוצע הקבוצה",
+      "summaryOneYear": "פער תשואת 12 חודשים מול ממוצע הקבוצה",
+      "returnAbovePeerAverage": "מעל ממוצע הקבוצה",
+      "returnBelowPeerAverage": "מתחת לממוצע הקבוצה",
+      "returnSameAsPeerAverage": "כמו ממוצע הקבוצה",
+      "summaryMyFee": "דמי הניהול השנתיים שלי",
+      "summaryPeerGroup": "גודל קבוצת ההשוואה",
+      "topPeersNote": "מוצגים 10 המסלולים הדומים המובילים לפי תשואת 5 שנים",
+      "table": {
+        "rank": "דירוג",
+        "fundName": "שם הקרן",
+        "lastMonth": "חודש אחרון",
+        "lastTwelveMonths": "12 חודשים אחרונים",
+        "threeYears": "תשואה 3 שנים",
+        "fiveYears": "תשואה 5 שנים",
+        "avgFee": "דמי ניהול ממוצעים",
+        "peerAverage": "ממוצע הקבוצה",
+        "yourFund": "הקרן שלך"
+      },
+      "feeDiffAbove": "{diff} מעל הממוצע הציבורי",
+      "feeDiffBelow": "{diff} מתחת לממוצע הציבורי",
+      "feeDiffSame": "כמו הממוצע הציבורי",
+      "noData": "אין נתונים זמינים",
+      "informationalDisclaimer": "מידע זה להצגה בלבד, מבוסס על נתוני גמל-נט הציבוריים ועל דמי הניהול שהוזנו על ידך. אין לראות בכך המלצה או ייעוץ פיננסי."
     }
   }
 }

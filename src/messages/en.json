@@ -450,6 +450,46 @@
         "note2": "Linking does not change your balance, contributions, or personal assumptions.",
         "close": "Close"
       }
+    },
+    "similarTracks": {
+      "title": "Similar Tracks Comparison",
+      "subtitle": "Informational only, based on public GemelNet data",
+      "peerGroup": "Peer group",
+      "peerCount": "{count, plural, one {1 similar track} other {{count} similar tracks}}",
+      "reportPeriod": "Report period",
+      "confidenceHigh": "High match confidence",
+      "confidenceMedium": "Medium match confidence",
+      "confidenceUnavailable": "No comparison available",
+      "matchStrict": "Strict match — same fund classification and sub-specialization",
+      "matchRelaxed": "Broader match — fund classification only",
+      "notEnoughPeers": "Not enough similar tracks are currently available for a reliable comparison.",
+      "missingClassification": "This fund cannot currently be classified for a similar-tracks comparison.",
+      "unsupportedSource": "Similar tracks comparison is currently available for GemelNet funds only.",
+      "notLinked": "Link a public fund to see a similar tracks comparison.",
+      "summaryFiveYear": "5-year return gap vs. peer average",
+      "summaryOneYear": "12-month return gap vs. peer average",
+      "returnAbovePeerAverage": "above peer average",
+      "returnBelowPeerAverage": "below peer average",
+      "returnSameAsPeerAverage": "same as peer average",
+      "summaryMyFee": "My annual fee",
+      "summaryPeerGroup": "Peer group size",
+      "topPeersNote": "Showing the top 10 similar tracks by 5-year return",
+      "table": {
+        "rank": "Rank",
+        "fundName": "Fund / track name",
+        "lastMonth": "Last month",
+        "lastTwelveMonths": "Last 12 months",
+        "threeYears": "3-year return",
+        "fiveYears": "5-year return",
+        "avgFee": "Avg. management fee",
+        "peerAverage": "Peer average",
+        "yourFund": "Your fund"
+      },
+      "feeDiffAbove": "{diff} above public average",
+      "feeDiffBelow": "{diff} below public average",
+      "feeDiffSame": "same as public average",
+      "noData": "No data available",
+      "informationalDisclaimer": "Informational only, based on public GemelNet data and the fee you entered. This is not a recommendation or financial advice."
     }
   }
 }

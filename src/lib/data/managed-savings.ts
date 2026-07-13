@@ -3,6 +3,10 @@ import { prisma } from "@/lib/db/prisma";
 import { getDevUserId } from "@/lib/managed-savings/dev-user";
 import { serializeHolding } from "@/lib/managed-savings/serializers";
 import { getLatestFundReturnSummaries } from "@/lib/public-funds/latest-fund-returns";
+import {
+  getPeerComparisonForPublicFund,
+  type PeerComparisonResult,
+} from "@/lib/public-funds/peer-comparison";
 import type { ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
 
 // TODO: Replace with `managed-savings:user:${userId}` when Auth.js is introduced.
@@ -34,12 +38,24 @@ async function fetchHoldingsForDevUser(): Promise<ManagedSavingsInvestment[]> {
     .filter((id): id is string => Boolean(id));
   const latestSummaries = await getLatestFundReturnSummaries(publicFundIds);
 
-  return records.map((record) =>
-    serializeHolding(
+  // Similar Tracks Comparison (Phase 2E-1): computed once per distinct linked
+  // PublicFund, not per holding — several holdings may link to the same fund.
+  const distinctPublicFundIds = Array.from(new Set(publicFundIds));
+  const comparisonEntries = await Promise.all(
+    distinctPublicFundIds.map(async (id) => [id, await getPeerComparisonForPublicFund(id)] as const)
+  );
+  const comparisonsByFundId = new Map<string, PeerComparisonResult>(comparisonEntries);
+
+  return records.map((record) => {
+    const investment = serializeHolding(
       record,
       record.publicFund ? latestSummaries.get(record.publicFund.id) ?? null : null
-    )
-  );
+    );
+    const comparison = record.publicFund
+      ? comparisonsByFundId.get(record.publicFund.id)
+      : undefined;
+    return comparison ? { ...investment, similarTracksComparison: comparison } : investment;
+  });
 }
 
 // Cached version — server-side cache keyed by a stable tag.

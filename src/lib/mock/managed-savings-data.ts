@@ -1,3 +1,5 @@
+import type { PeerComparisonResult } from "@/lib/public-funds/peer-comparison";
+
 export interface ManagedSavingsInvestment {
   id: string;
   name: string;
@@ -23,6 +25,12 @@ export interface ManagedSavingsInvestment {
   // Identity only — never AUM, never the full FundReturn history, never
   // presented as the user's personal return.
   linkedPublicFund?: LinkedPublicFund | null;
+  // Phase 2E-1: Similar Tracks Comparison — computed only for linked GemelNet
+  // holdings (see src/lib/public-funds/peer-comparison.ts). undefined when not
+  // computed (e.g. mock data, mutation-action responses prior to refresh);
+  // null is never used here — a missing/unavailable comparison is represented
+  // via `comparisonStatus`.
+  similarTracksComparison?: PeerComparisonResult;
 }
 
 export interface LinkedPublicFund {

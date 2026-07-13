@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Info, TrendingUp, StickyNote, AlertTriangle } from "lucide-react";
 import { formatPercent, formatDate } from "@/lib/locale/formatters";
 import { type ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
+import { SimilarTracksComparison } from "./SimilarTracksComparison";
 
 interface ExpandedManagedSavingsRowProps {
   investment: ManagedSavingsInvestment;
@@ -150,7 +151,12 @@ export function ExpandedManagedSavingsRow({
               </p>
             </div>
           </div>
-        ) : (
+        ) : null}
+
+        {/* SIMILAR TRACKS COMPARISON — linked GemelNet holdings only (Phase 2E-1) */}
+        <SimilarTracksComparison investment={investment} />
+
+        {!linkedFund && (
           /* Not linked — compact red/error data-completeness state (Phase 2D-1) */
           <div className="flex items-start gap-2.5 rounded-lg bg-red-50 border border-red-200/70 px-4 py-3">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-red-600" />
