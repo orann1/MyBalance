@@ -1,4 +1,5 @@
 import type { PeerComparisonResult } from "@/lib/public-funds/peer-comparison";
+import { projectCompoundingWithFee, projectLinearWithoutFee } from "@/lib/financial/projection";
 
 export interface ManagedSavingsInvestment {
   id: string;
@@ -334,7 +335,9 @@ function projectionYearOffsets(customYears: number): number[] {
 // may use the fallback rate) and the linked branch of
 // projectWithAvailableReturnOrZero (live display). Only the source of
 // `annualReturnPercent` differs between callers; the math itself must stay
-// identical either way.
+// identical either way. Delegates to the domain-agnostic scalar engine
+// (Phase 2F-1) — this function's job is only to map the investment/year-list
+// shape to/from that engine's scalar input/output.
 function runProjection(
   investment: ManagedSavingsInvestment,
   years: number[],
@@ -345,42 +348,20 @@ function runProjection(
   const results: Record<number, SimulationYear> = {};
 
   years.forEach((yearOffset) => {
-    const year = currentYear + yearOffset;
-    const monthsOfContribution = yearOffset * 12;
-    const totalContributions =
-      investment.currentBalance + investment.monthlyContribution * monthsOfContribution;
-
-    const baseGrowthRate = annualReturnPercent / 100;
-    const adjustedGrowthRate = baseGrowthRate - investment.accumulationFeePercent / 100;
-    const monthlyRate = adjustedGrowthRate / 12;
-
-    // The annuity term below divides by monthlyRate — guard the case where
-    // the annual return happens to exactly offset the accumulation fee
-    // (adjustedGrowthRate === 0), which otherwise divides by zero. The
-    // mathematical limit of the compounding formula as the rate approaches
-    // zero is a flat linear sum of contributions, so that's the correct
-    // value here too.
-    const projectedValue =
-      monthlyRate === 0
-        ? Math.round(totalContributions)
-        : Math.round(
-            investment.currentBalance * Math.pow(1 + monthlyRate, monthsOfContribution) +
-              (investment.monthlyContribution *
-                (Math.pow(1 + monthlyRate, monthsOfContribution) - 1)) /
-                monthlyRate
-          );
-
-    const estimatedFees = Math.round(
-      totalContributions * (investment.accumulationFeePercent / 100) * yearOffset || 0
-    );
-    const estimatedNetGain = projectedValue - totalContributions;
+    const projection = projectCompoundingWithFee({
+      currentBalance: investment.currentBalance,
+      monthlyContribution: investment.monthlyContribution,
+      annualReturnPercent,
+      annualFeePercent: investment.accumulationFeePercent,
+      years: yearOffset,
+    });
 
     results[yearOffset] = {
-      year,
-      projectedValue,
-      estimatedContributions: totalContributions,
-      estimatedFees,
-      estimatedNetGain,
+      year: currentYear + yearOffset,
+      projectedValue: projection.projectedValue,
+      estimatedContributions: projection.estimatedContributions,
+      estimatedFees: projection.estimatedFees,
+      estimatedNetGain: projection.estimatedNetGain,
     };
   });
 
@@ -406,17 +387,18 @@ function runZeroReturnProjection(
   const results: Record<number, SimulationYear> = {};
 
   years.forEach((yearOffset) => {
-    const year = currentYear + yearOffset;
-    const monthsOfContribution = yearOffset * 12;
-    const totalContributions =
-      investment.currentBalance + investment.monthlyContribution * monthsOfContribution;
+    const projection = projectLinearWithoutFee({
+      currentBalance: investment.currentBalance,
+      monthlyContribution: investment.monthlyContribution,
+      years: yearOffset,
+    });
 
     results[yearOffset] = {
-      year,
-      projectedValue: totalContributions,
-      estimatedContributions: totalContributions,
-      estimatedFees: 0,
-      estimatedNetGain: 0,
+      year: currentYear + yearOffset,
+      projectedValue: projection.projectedValue,
+      estimatedContributions: projection.estimatedContributions,
+      estimatedFees: projection.estimatedFees,
+      estimatedNetGain: projection.estimatedNetGain,
     };
   });
 

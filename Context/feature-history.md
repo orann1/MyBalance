@@ -863,3 +863,45 @@ Branch History:
 - Feature branch: `feature/similar-tracks-comparison`
 - Merged into: `master`
 - Commit: `feat: add similar tracks comparison`
+
+## Phase 2F-1 — Projection Engine Refactor
+
+Status: **COMPLETED AND VERIFIED** (2026-07-14). Product Owner browser QA approved. Committed and merged into `master` from `feature/projection-engine-refactor`.
+
+This phase was a behavior-preserving refactor: it extracted the existing Managed Savings projection formula into a reusable, pure, scalar-input projection engine, in preparation for the future Fund Replacement Simulator (Phase 2F-2+). No product behavior, UI, schema, database, or i18n changed.
+
+Completed:
+- **New pure scalar engine** (`src/lib/financial/projection.ts`, new file): `projectCompoundingWithFee(input)` (fee-adjusted monthly-compounding projection, including the pre-existing zero-effective-rate guard — when the annual return exactly offsets the fee, the formula falls back to a linear sum instead of dividing by zero) and `projectLinearWithoutFee(input)` (the approved 0%-return fallback: `currentBalance + monthlyContribution × months`, no fee, no growth). Both take/return plain scalar types only — no React, i18n, Prisma, `ManagedSavingsInvestment`, or any other domain type. No comparison function, candidate-fund selection, or simulator UI was added — explicitly out of scope for this phase.
+- **Domain adapter layer unchanged in shape**: `src/lib/mock/managed-savings-data.ts`'s internal `runProjection`/`runZeroReturnProjection` helpers now map a `ManagedSavingsInvestment` + year list to/from the new engine's scalar input/output instead of computing the formula inline — the math is bit-for-bit identical, only extracted into a reusable module. `getDisplayAnnualReturn`, `getProjectionAnnualReturn`, `projectWithAvailableReturnOrZero`, `projectSimulations`, and `calculateTotalSummary` are unchanged in signature and behavior; they still decide which return rate/mode a holding uses (linked-fund return vs. 0% fallback) — the engine itself has no knowledge of `linkedPublicFund`, `trackPerformance`, product type, group, or peer data.
+- **All existing live call sites unchanged**: no call site outside `managed-savings-data.ts` was modified — `ManagedSavingsGroupTable.tsx` (per-row table cells), `src/lib/managed-savings/summary.ts`'s `calculateProjectionTotals` (group + global totals row) and `calculateManagedSavingsSummary`, `ManagedSavingsGroupSummaryRow.tsx`, `ManagedSavingsPageClient.tsx` (top KPI cards), and the legacy `ManagedSavingsSummaryTable.tsx` all continue to call the same existing adapter functions with the same signatures and outputs.
+- **Approved 0%-return fallback preserved exactly**: current balance remains included, monthly contributions accumulate linearly, no fee drag is applied, no mock return is used — verified both by regression comparison and live browser QA (an unlinked holding with 0 monthly contribution projects to exactly its current balance at every horizon).
+
+Regression Verification:
+- No Vitest is configured in this repo (no `test` script, no `vitest` dependency). A temporary script (`scripts/tmp-verify-projection.ts`) was created, run via `npx tsx`, and deleted before completion — it compared a byte-for-byte inlined copy of the pre-refactor formulas against the new engine across 13 representative scenarios (zero balance/contribution, balance-only at 0%, contributions at 0%, positive return with/without fee, return-equals-fee zero-rate guard, 1-year and 30/40-year horizons, custom horizons 12 and 22, negative effective rate, decimal inputs, always-flat zero-contribution holding) at multiple year offsets each.
+- Result: **91 comparisons run, 0 failures.**
+- No permanent test file was added to the repo.
+
+Out of Scope (Not Implemented in Phase 2F-1):
+- Fund Replacement Simulator modal/UI.
+- `compareFundProjections` or any candidate-fund selection/comparison logic.
+- Any new i18n strings or UI change.
+- Any Prisma schema change or migration.
+
+Automated Checks (final):
+- `npm run lint` — passed, 0 errors/warnings.
+- `npx tsc --noEmit` — passed.
+- `npm run build` — passed (pre-existing unrelated `ENVIRONMENT_FALLBACK` log line during static generation only).
+- `npm run db:validate` — passed, schema unchanged.
+
+Product Owner browser QA (final approval):
+- `/managed-savings` and `/en/managed-savings` both verified via a temporary Playwright script (deleted after use): zero console/page errors, correct `dir` (`rtl` / `ltr`), KPI cards, per-row projections, group totals, and table totals all rendered with values matching pre-refactor behavior.
+- Linked holdings confirmed to still show their real 5-year return and compound correctly; unlinked/no-return holdings confirmed to show "—" for the percentage column but a real 0%-assumption projected amount, never hidden and never mock-derived.
+
+Known Limitations (carried forward):
+- Negative effective-rate behavior (accumulation fee exceeding the annual return) remains unguarded — this was true before the refactor as well and produces a mathematically valid (if unusual) shrinking projection; not changed or newly introduced by this phase.
+- Phase 2F-2 (Fund Replacement Simulator UI) and Phase 2F-3 (interactive scenarios) are not started — no scope defined or approved yet.
+
+Branch History:
+- Feature branch: `feature/projection-engine-refactor`
+- Merged into: `master`
+- Commit: `refactor: extract reusable projection engine`
