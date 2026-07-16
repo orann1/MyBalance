@@ -41,12 +41,22 @@ export interface PeerComparisonRow {
   publicFundId: string;
   fundId: string;
   fundName: string;
+  // Added Phase 2F-2 for Fund Replacement Simulator modal identity only —
+  // intentionally not rendered as a SimilarTracksComparison table column.
+  managingCompany: string;
   isTarget: boolean;
   rank: number | null;
   lastMonthReturn: number | null;
   last12MonthReturn: number | null;
   trailing3YrReturn: number | null;
   trailing5YrReturn: number | null;
+  // Added Phase 2F-2: the annualized (not cumulative) 5-year return. Required
+  // for the Fund Replacement Simulator's compounding projection — the
+  // existing trailing5YrReturn above is a cumulative 5-year return and must
+  // never be used as an annual rate input. Not rendered as a
+  // SimilarTracksComparison table column (that column intentionally keeps
+  // showing trailing5YrReturn, unchanged from Phase 2E-1).
+  annualized5YrReturn: number | null;
   avgAnnualManagementFee: number | null;
 }
 
@@ -94,6 +104,7 @@ interface ReportPeriodRow {
   monthlyReturn: string;
   trailing3YrReturn: string | null;
   trailing5YrReturn: string | null;
+  annualized5YrReturn: string | null;
   avgAnnualManagementFee: string | null;
 }
 
@@ -200,6 +211,7 @@ export async function getPeerComparisonForPublicFund(
       id: true,
       fundId: true,
       fundName: true,
+      managingCompany: true,
       targetPopulation: true,
     },
   });
@@ -236,7 +248,7 @@ export async function getPeerComparisonForPublicFund(
 
   const periodRows = await prisma.$queryRaw<ReportPeriodRow[]>(Prisma.sql`
     SELECT "publicFundId", "reportPeriod", "monthlyReturn", "trailing3YrReturn",
-      "trailing5YrReturn", "avgAnnualManagementFee"
+      "trailing5YrReturn", "annualized5YrReturn", "avgAnnualManagementFee"
     FROM "FundReturn"
     WHERE "publicFundId" = ANY(${groupFundIds}::text[]) AND "reportPeriod" = ${latestReportPeriod}
   `);
@@ -310,6 +322,7 @@ export async function getPeerComparisonForPublicFund(
         publicFundId: fund.id,
         fundId: fund.fundId,
         fundName: fund.fundName,
+        managingCompany: fund.managingCompany,
         isTarget: fund.id === targetFund.id,
         lastMonthReturn: Number(periodRow.monthlyReturn),
         last12MonthReturn: computeRolling12MonthReturn(
@@ -319,6 +332,8 @@ export async function getPeerComparisonForPublicFund(
           periodRow.trailing3YrReturn !== null ? Number(periodRow.trailing3YrReturn) : null,
         trailing5YrReturn:
           periodRow.trailing5YrReturn !== null ? Number(periodRow.trailing5YrReturn) : null,
+        annualized5YrReturn:
+          periodRow.annualized5YrReturn !== null ? Number(periodRow.annualized5YrReturn) : null,
         avgAnnualManagementFee: rawFee !== null ? Number(rawFee) : null,
       };
     });

@@ -57,6 +57,16 @@ It is not personal user financial data unless combined with user-entered balance
 - Public fund returns are never presented as the user's personal return. The linked fund's `latestAnnualized5YrReturn` is used only as a projection assumption (`getEffectiveAnnualReturn`) — clearly distinguished from personal realized returns. The mock/fallback public performance card is unchanged by this phase.
 - No personal data is sent to Data.gov.il or any external service — the matching UI searches the local DB only (Phase 2C-3A backend).
 
+### Phase 2F-2 — Fund Scenario Comparison (COMPLETED)
+
+The comparison modal (internal name: Fund Replacement Simulator) combines personal data (current balance, monthly contribution, personal management fee) with public fund-level data (a candidate fund's public return/fee) to compute an informational projection comparison:
+
+- The combined result is treated with the same sensitivity as any other personal-plus-public-fund context (see the Phase 2C-3B rule above) — not logged, not placed in URLs, not persisted, no analytics.
+- Nothing computed by the simulator is written to the database; there is no "saved simulation" record.
+- No Data.gov.il or other external calls are made by the simulator — all data comes from the already-loaded holding and the already-computed Similar Tracks Comparison peer data.
+- The candidate's public average management fee is never presented as a fee guaranteed or available to the user, and the candidate's projected value is never labeled as a recommendation.
+- **QA fix round (2026-07-16)**: the product-facing name was changed from "Fund Replacement Simulator" to "Fund Scenario Comparison" (Hebrew: "השוואת תרחישי קרנות") to remove any switch/replacement framing from user-facing text. Result wording uses neutral "under these assumptions, the compared fund scenario is higher/lower by X" phrasing, and a short explicit disclaimer states the information is "not a recommendation to switch funds." No behavior/data-handling change — wording and layout only.
+
 ## Phase 2B — Managed Savings Persistence
 
 Once Phase 2B persists managed savings holdings to the database:

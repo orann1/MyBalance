@@ -373,7 +373,21 @@ export function ManagedSavingsGroupTable({
   };
 
   return (
-    <div className="overflow-x-auto">
+    // `contain-paint` (in addition to `overflow-x-auto`) is required, not
+    // cosmetic: @dnd-kit/core's DndContext always renders a visually-hidden,
+    // `position: fixed` accessibility live-region (`DndLiveRegion-*`) inside
+    // this subtree. A `position: fixed` descendant is positioned relative to
+    // the viewport/initial containing block and is NOT contained by an
+    // ordinary ancestor's `overflow: auto/hidden` — its mere presence was
+    // found (via bisection) to prevent this wrapper from properly isolating
+    // the wide table's layout overflow from `document.documentElement.
+    // scrollWidth`, inflating it far beyond the viewport on mobile even
+    // though the table itself was still visually/interactively scoped
+    // correctly. `contain: paint` additionally establishes this wrapper as
+    // the containing block for fixed/absolute descendants, which resolves
+    // it (verified: reduced document.documentElement.scrollWidth from 1276
+    // to 390 on a 390px-wide viewport with two rendered groups).
+    <div className="overflow-x-auto contain-paint">
       <DndContext
         id={`managed-savings-holdings-${groupId}`}
         sensors={sensors}

@@ -483,13 +483,65 @@
         "fiveYears": "5-year return",
         "avgFee": "Avg. management fee",
         "peerAverage": "Peer average",
-        "yourFund": "Your fund"
+        "yourFund": "Your fund",
+        "actionColumnSr": "Scenario comparison action"
       },
       "feeDiffAbove": "{diff} above public average",
       "feeDiffBelow": "{diff} below public average",
       "feeDiffSame": "same as public average",
       "noData": "No data available",
-      "informationalDisclaimer": "Informational only, based on public GemelNet data and the fee you entered. This is not a recommendation or financial advice."
+      "informationalDisclaimer": "Informational only, based on public GemelNet data and the fee you entered. This is not a recommendation or financial advice.",
+      "action": {
+        "tooltip": "Compare fund scenario",
+        "ariaLabel": "Compare fund scenario with {fundName}"
+      }
+    },
+    "fundReplacementSimulator": {
+      "title": "Fund Scenario Comparison",
+      "subtitle": "A comparison based on your current fund data and a similar public fund",
+      "close": "Close",
+      "sections": {
+        "currentFund": "Current fund",
+        "candidateFund": "Candidate fund"
+      },
+      "identity": {
+        "holdingLabel": "Holding name",
+        "fundNameLabel": "Fund name",
+        "managingCompanyLabel": "Managing company",
+        "fundNumberLabel": "Fund number"
+      },
+      "assumptions": {
+        "title": "Comparison assumptions",
+        "startingBalance": "Starting balance",
+        "monthlyContribution": "Monthly contribution",
+        "annualReturn": "Annual return assumption",
+        "annualFee": "Annual management fee",
+        "horizon": "Projection horizon",
+        "returnMethodologyNote": "This comparison uses the annualized 5-year return. The Similar Tracks table shows the cumulative 5-year return.",
+        "currentFeeSourceLabel": "Your entered fee",
+        "candidateFeeSourceLabel": "Reported public average"
+      },
+      "horizon": {
+        "customLabel": "Custom horizon"
+      },
+      "results": {
+        "title": "Scenario Comparison Results",
+        "horizon": "Horizon",
+        "currentFund": "Current fund",
+        "candidateFund": "Candidate fund",
+        "difference": "Difference",
+        "summaryPrefix": "Projected difference under these assumptions after {years} years",
+        "summaryPositive": "Under the selected assumptions, the compared fund scenario is higher by {amount}.",
+        "summaryNegative": "Under the selected assumptions, the compared fund scenario is lower by {amount}.",
+        "summaryZero": "Under the selected assumptions, there is no difference between the scenarios."
+      },
+      "info": {
+        "heading": "Important information",
+        "point1": "Historical return data is used as a projection assumption and does not guarantee future results.",
+        "point2": "The candidate fee is a reported public average and may differ from your actual offered fee.",
+        "point3": "The calculation excludes tax, inflation, transfer costs, contribution changes, and other personal factors."
+      },
+      "disclaimer": "This information is provided for comparison only and is not a recommendation to switch funds."
     }
   }
 }

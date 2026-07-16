@@ -58,13 +58,29 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
         />
       )}
 
-      <aside
-        className={cn(
-          "fixed top-16 bottom-0 w-[300px] border-e border-border/60 bg-card overflow-y-auto transition-transform duration-300 z-40 md:hidden",
-          isRTL ? "right-0" : "left-0",
-          isOpen ? "translate-x-0" : (isRTL ? "translate-x-full" : "-translate-x-full")
-        )}
-      >
+      {/*
+        Clipping wrapper: `position: fixed; inset: 0` matches the viewport
+        exactly, and `overflow: hidden` on it clips the off-canvas `<aside>`
+        below. This matters because the `<aside>` itself is no longer
+        `position: fixed` (see below) — a `position: fixed` element is
+        anchored to the viewport/initial containing block directly and
+        ignores an ordinary ancestor's `overflow: hidden`/`clip`, so its
+        translated-off-canvas box was inflating
+        `document.documentElement.scrollWidth` even while fully invisible
+        (verified: closed drawer bounding box extended to x=690 on a 390px
+        viewport). Making the `<aside>` `position: absolute` relative to
+        this exactly-viewport-sized `overflow-hidden` wrapper preserves the
+        identical slide-in/out visual behavior while making the off-canvas
+        position genuinely clipped, not just visually hidden.
+      */}
+      <div className="fixed inset-0 z-40 overflow-hidden pointer-events-none md:hidden">
+        <aside
+          className={cn(
+            "absolute top-16 bottom-0 w-[300px] border-e border-border/60 bg-card overflow-y-auto transition-transform duration-300 pointer-events-auto",
+            isRTL ? "right-0" : "left-0",
+            isOpen ? "translate-x-0" : (isRTL ? "translate-x-full" : "-translate-x-full")
+          )}
+        >
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div className="text-sm font-semibold text-muted-foreground">{t("navigation")}</div>
@@ -142,6 +158,7 @@ export function MobileDrawer({ isOpen, onClose }: MobileDrawerProps) {
           </div>
         </div>
       </aside>
+      </div>
     </>
   );
 }

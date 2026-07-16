@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { BarChart3, Info } from "lucide-react";
+import { BarChart3, Calculator, Info } from "lucide-react";
 import { formatPercent, formatDate } from "@/lib/locale/formatters";
-import { type ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
+import { getDisplayAnnualReturn, type ManagedSavingsInvestment } from "@/lib/mock/managed-savings-data";
 import type { PeerComparisonRow } from "@/lib/public-funds/peer-comparison";
 import { cn } from "@/lib/utils";
+import { FundReplacementSimulatorModal } from "./FundReplacementSimulatorModal";
 
 interface SimilarTracksComparisonProps {
   investment: ManagedSavingsInvestment;
@@ -97,10 +99,30 @@ function FeeCell({ value, isBest }: { value: number | null; isBest: boolean }) {
   );
 }
 
+// Candidate eligibility for the Fund Replacement Simulator entry point
+// (Phase 2F-2): requires a real, finite 5-year return and a real, finite
+// average management fee — never simulated with a substituted/fallback
+// value. The user's own row and the peer-average row are never eligible
+// (isTarget rows are filtered out by the caller; the average row is not a
+// PeerComparisonRow at all).
+function isCandidateSimulationEligible(row: PeerComparisonRow): boolean {
+  return (
+    !row.isTarget &&
+    Number.isFinite(row.annualized5YrReturn) &&
+    Number.isFinite(row.avgAnnualManagementFee)
+  );
+}
+
 export function SimilarTracksComparison({ investment }: SimilarTracksComparisonProps) {
   const t = useTranslations("managedSavings.similarTracks");
+  const [simulatorCandidate, setSimulatorCandidate] = useState<PeerComparisonRow | null>(null);
 
   if (!investment.linkedPublicFund) return null;
+
+  // The current side of the simulator requires a real linked 5-year return —
+  // when absent, the simulation action must not be offered on any row for
+  // this holding (never a mock/0% fallback for the "current fund" scenario).
+  const currentFundSimulationEligible = getDisplayAnnualReturn(investment) != null;
 
   const comparison = investment.similarTracksComparison;
 
@@ -263,6 +285,11 @@ export function SimilarTracksComparison({ investment }: SimilarTracksComparisonP
               <th className="px-2 py-2 text-end font-medium">{t("table.threeYears")}</th>
               <th className="px-2 py-2 text-end font-medium">{t("table.fiveYears")}</th>
               <th className="px-2 py-2 text-end font-medium">{t("table.avgFee")}</th>
+              {currentFundSimulationEligible && (
+                <th className="px-2 py-2 text-end font-medium">
+                  <span className="sr-only">{t("table.actionColumnSr")}</span>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -339,6 +366,21 @@ export function SimilarTracksComparison({ investment }: SimilarTracksComparisonP
                     }
                   />
                 </td>
+                {currentFundSimulationEligible && (
+                  <td className="px-2 py-2 text-end">
+                    {isCandidateSimulationEligible(row) && (
+                      <button
+                        type="button"
+                        onClick={() => setSimulatorCandidate(row)}
+                        title={t("action.tooltip")}
+                        aria-label={t("action.ariaLabel", { fundName: row.fundName })}
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:text-asset hover:bg-asset/10 transition-colors"
+                      >
+                        <Calculator className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
             {averageRow && (
@@ -360,6 +402,7 @@ export function SimilarTracksComparison({ investment }: SimilarTracksComparisonP
                 <td className="px-2 py-2 text-end">
                   <FeeCell value={averageRow.avgAnnualManagementFee} isBest={false} />
                 </td>
+                {currentFundSimulationEligible && <td className="px-2 py-2" />}
               </tr>
             )}
           </tbody>
@@ -370,6 +413,15 @@ export function SimilarTracksComparison({ investment }: SimilarTracksComparisonP
         <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-blue-600" />
         <p className="text-xs text-muted-foreground">{t("informationalDisclaimer")}</p>
       </div>
+
+      {simulatorCandidate && (
+        <FundReplacementSimulatorModal
+          investment={investment}
+          candidate={simulatorCandidate}
+          isOpen={simulatorCandidate !== null}
+          onClose={() => setSimulatorCandidate(null)}
+        />
+      )}
     </div>
   );
 }

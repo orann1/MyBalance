@@ -113,12 +113,23 @@
   }
   html {
     font-family: var(--font-sans);
+    /* Root-level overflow defense: `position: fixed` elements positioned
+       outside the viewport (e.g. the off-canvas MobileDrawer, translated
+       fully out of view when closed) are measured against the viewport/
+       initial containing block, not against any ordinary ancestor's box —
+       so they can inflate `document.documentElement.scrollWidth` even
+       though `<body>`'s own content never overflows. `overflow-x: clip` on
+       `html`/`body` is the standard fix for this category of bug and does
+       not affect nested local scroll containers (e.g. `overflow-x-auto`
+       table wrappers), which remain independently scrollable. */
+    overflow-x: clip;
   }
   body {
     background: var(--gradient-app);
     background-attachment: fixed;
     color: var(--color-foreground);
     min-height: 100vh;
+    overflow-x: clip;
   }
 }
 

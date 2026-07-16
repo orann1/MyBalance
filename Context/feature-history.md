@@ -905,3 +905,63 @@ Branch History:
 - Feature branch: `feature/projection-engine-refactor`
 - Merged into: `master`
 - Commit: `refactor: extract reusable projection engine`
+
+## Phase 2F-2 — Fund Scenario Comparison MVP
+
+Status: **COMPLETED AND VERIFIED** (2026-07-16). Product Owner browser QA approved, including two focused fix rounds. Committed and merged into `master` from `feature/fund-replacement-simulator`.
+
+User-facing feature name: **Fund Scenario Comparison** (Hebrew: **השוואת תרחישי קרנות**). Internal component file (`FundReplacementSimulatorModal.tsx`), the i18n namespace key (`fundReplacementSimulator`), and the branch name still say "Fund Replacement Simulator" — only user-facing text was renamed during the QA fix rounds; a broad internal rename was explicitly out of scope for those fix rounds and was not performed during Finish Work either.
+
+This phase connects the linked-holding personal data, the Phase 2E-1 Similar Tracks peer data, and the Phase 2F-1 shared projection engine into an informational current-vs-candidate fund comparison. No schema changes, no persisted simulation state, no external calls.
+
+Completed:
+- **Entry point**: a compact calculator icon action on eligible candidate rows within `SimilarTracksComparison`'s existing peer table. Never shown for the user's own linked-fund row, the peer-average row, candidates with no usable annualized 5-year return, or candidates with no usable public average management fee. The entire action column is omitted when the current linked fund itself has no usable annualized 5-year return.
+- **Comparison layer** (`src/lib/financial/fund-comparison.ts`, new): `compareFundProjections({ currentScenario, candidateScenario })` — pure, reuses `projectCompoundingWithFee` for both scenarios (no formula duplication), returns `{ years, currentProjectedValue, candidateProjectedValue, difference }` where `difference = candidate − current`. `buildSimulatorHorizons(customYears)` returns the de-duplicated `[1, 5, 10, customYears?]` horizon list.
+- **Candidate data**: `PeerComparisonRow` (`src/lib/public-funds/peer-comparison.ts`) gained `managingCompany` (modal identity only, not a new table column) and `annualized5YrReturn` (the projection input). A real correctness issue was found and fixed during initial implementation: the table's existing `trailing5YrReturn` column is a *cumulative* 5-year return, not an annual rate — using it directly in the compounding formula produced a nonsensical result (an apparent 111.83% "annual return" for a real local candidate). `annualized5YrReturn` is a separate, correctly-annualized column on the same `FundReturn` row and is what the comparison actually uses.
+- **Modal** (`src/components/managed-savings/FundReplacementSimulatorModal.tsx`, new): current-vs-candidate fund identity (holding/fund name, managing company, fund number), a read-only assumptions table (same balance/contribution for both scenarios; different return/fee per scenario, each fee value captioned "Your entered fee" vs. "Reported public average"; an explicit note distinguishing the comparison's annualized 5-year return from the Similar Tracks table's cumulative 5-year return), an editable custom horizon (1–50, default 15, immediate recalculation, no duplicate row when it matches a baseline horizon), a results table (1/5/10/custom years — current, candidate, signed difference), a neutral custom-horizon summary sentence ("higher/lower by X" / "no difference", never "profit"/"gain"/"switch"), a compact three-point information list (historical-data caveat, candidate-fee-is-a-public-average caveat, excluded-factors caveat), and a short explicit non-recommendation disclaimer.
+- **RTL/LTR fix**: fund-identity rows changed from a `justify-between` split layout (label at one edge, value at the opposite edge) to a stacked label-then-value layout, both `text-start`; assumption/result table value columns changed from `text-end` to `text-start`; a small `Num` helper wraps only pure numeric/currency/percent tokens in `dir="ltr"` (never mixed number+word phrases, which would reverse their natural reading order).
+- **Mobile modal containment**: `FundReplacementSimulatorModal` is rendered via `createPortal(..., document.body)` — required because it can be opened from inside `ExpandedManagedSavingsRow`, whose `expanded-row-in` CSS animation uses `animation: ... both`, leaving `transform: translateY(0)` permanently applied after the animation completes; a non-`none` transform on an ancestor creates a new containing block for `position: fixed` descendants, which broke the modal's fixed backdrop positioning at narrow viewports before the portal fix. First portal usage in this codebase.
+- **Mobile document-overflow fix** (found via Product Owner browser QA after the above, root-caused via Playwright DOM bisection, two independent unrelated causes): (1) `MobileDrawer`'s closed-state off-canvas `position: fixed` + `translateX` panel was a genuinely unclipped layout box (fixed elements anchor to the viewport, not to an ordinary ancestor's overflow) — fixed by wrapping the panel in a same-size `fixed inset-0 overflow-hidden` container and changing the panel itself from `fixed` to `absolute` relative to that wrapper. (2) `ManagedSavingsGroupTable`'s intentionally-wide holdings table, inside an `overflow-x-auto` wrapper, was still inflating `document.documentElement.scrollWidth` because `@dnd-kit/core`'s `DndContext` always renders a hidden `position: fixed` accessibility live-region inside that subtree, and ordinary `overflow` does not establish a containing block for fixed descendants — fixed by adding `contain: paint` (Tailwind `contain-paint`) alongside `overflow-x-auto` on the wrapper. A secondary `overflow-x: clip` was also added to `html`/`body` as a defense-in-depth safety net (verified not sufficient alone for either bug). Verified: `document.documentElement.scrollWidth` went from 1276px (he) / 1367px (en) to exactly 390px on a 390px-wide mobile viewport, with modal closed, modal open, and drawer open, while the intentionally-wide table wrapper still correctly reports `scrollWidth (1305px) > clientWidth (356px)` — confirming local table scrolling was never suppressed.
+- **i18n**: `managedSavings.fundReplacementSimulator` namespace (title/subtitle, identity/assumption/result labels, info block, disclaimer) plus `managedSavings.similarTracks.action.*`/`table.actionColumnSr`, added to both `he.json`/`en.json`. All visible text translated; no hardcoded strings.
+
+Out of Scope (Not Implemented in Phase 2F-2):
+- Phase 2F-3 interactive scenario editing — balance, monthly contribution, return, and fee remain read-only; only the custom horizon is editable.
+- Saved/exported scenarios, comparing multiple candidates simultaneously, charts, historical backtesting, Monte Carlo simulation.
+- Tax, inflation, transfer costs, contribution escalation, or volatility/confidence-range modeling.
+- Any fund-switching, transfer, or linking action from the modal.
+- Any Prisma schema change, migration, or database write — no simulation state is ever persisted.
+- Any external API call — all data comes from already-loaded holding and Similar Tracks peer data.
+- A broad internal rename of the component file, i18n namespace key, or branch name to match the "Fund Scenario Comparison" product-facing name.
+
+Automated Checks (final):
+- `npm run lint` — passed, 0 errors/warnings.
+- `npx tsc --noEmit` — passed.
+- `npm run build` — passed, exit 0.
+- `npm run db:validate` — passed, schema unchanged.
+- Calculation verification: a temporary script (`scripts/tmp-verify-fund-comparison.ts`, run via `npx tsx`, deleted before completion) covered all 17 required scenarios (equal/higher/lower return, lower/higher fee, zero balance with contributions, positive balance with zero contribution, 1/5/10-year horizons matching direct engine calls, custom horizons 12/22, custom horizon matching a baseline value with no duplicate row, decimal inputs, signed negative/zero currency formatting) — 24 checks, 0 failures. Not rerun during later presentation-only/layout-only QA fix rounds, since no calculation source file changed after this initial verification.
+
+Product Owner browser QA (final approval, after fix rounds):
+- Eligible candidate action visible and correctly gated; ineligible rows/peer-average/self-row correctly show no action.
+- Current and candidate fund identity, assumptions, and results verified correct against underlying DB values in both locales.
+- Custom horizon (including values matching/not matching baseline horizons) updates immediately with no duplicate rows.
+- Hebrew RTL and English LTR alignment verified correct throughout the modal (identity cards, assumptions table, results table, summary).
+- Mobile (390px) modal fits viewport with no horizontal overflow, in both locales.
+- Mobile document-level horizontal overflow eliminated: Hebrew initial page shows visible header/content immediately (no blank canvas, no scroll needed to find the app); English initial page has no root horizontal scroll; drawer opens from the correct side per locale and does not expand the document when closed or open; intentionally wide tables remain locally horizontally scrollable.
+- Desktop regression confirmed: sidebar, tables, expanded rows, Similar Tracks table, calculator actions, and modal centering all unaffected.
+- Zero browser console errors across all verified locales/viewports.
+
+Product boundary confirmed:
+- Neutral scenario-comparison wording throughout ("Projected difference under these assumptions...", "the compared fund scenario is higher/lower by...") — no "recommended", "best", "you should switch/move", "profit", "gain", or "guaranteed" language.
+- Candidate management fee is always labelled as a reported public average, never presented as available/guaranteed to the user.
+- The comparison's annualized 5-year return input is explicitly distinguished, in-UI, from the Similar Tracks table's cumulative 5-year return.
+- Combined personal-plus-public simulation inputs/results are not logged, not placed in URLs, not persisted, and not sent to any external service.
+
+Known Deferred Items (carried forward):
+- Phase 2F-3 (interactive scenario editing) — not started, no scope defined or approved.
+- Internal component/i18n-key/branch renaming to match the product-facing "Fund Scenario Comparison" name — deferred, not required for correctness.
+- All previously-carried-forward known limitations (dev-user stub, `<html lang/dir>` SSR for English routes, product-type inference for `PublicFund`, AUM units, scheduled sync, Managed Savings groups move/cross-group work) remain unchanged and unrelated to this phase.
+
+Branch History:
+- Feature branch: `feature/fund-replacement-simulator`
+- Merged into: `master`
+- Commit: `feat: add fund scenario comparison`

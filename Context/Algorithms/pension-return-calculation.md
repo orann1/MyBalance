@@ -34,6 +34,19 @@ If the holding is unlinked, or linked to a fund with a null `latestAnnualized5Yr
 
 Phase 2C-4A (query hardening only) did not change this calculation boundary — it only optimized how the latest `FundReturn` row per fund is fetched from the database.
 
+## Fund Scenario Comparison Boundary (Phase 2F-2 — COMPLETED)
+
+The Fund Scenario Comparison feature (product-facing name; internal file `src/components/managed-savings/FundReplacementSimulatorModal.tsx`, comparison math in `src/lib/financial/fund-comparison.ts`) projects a current-fund scenario against a candidate public-fund scenario using the shared `projectCompoundingWithFee` engine (Phase 2F-1). Both scenarios require a real **annualized** 5-year return — never a mock, 0%, or substituted value:
+
+- Current fund: `getDisplayAnnualReturn(investment)` — the linked fund's `latestAnnualized5YrReturn`, same value already used elsewhere for display/projection.
+- Candidate fund: `PeerComparisonRow.annualized5YrReturn` — the same `FundReturn.annualized5YrReturn` column, newly selected by `peer-comparison.ts` for this purpose.
+
+**Important**: `PeerComparisonRow.trailing5YrReturn` (the field the Similar Tracks Comparison table displays as "5-year return", unchanged since Phase 2E-1) is a **cumulative** 5-year return, not an annual rate, and must never be used as `annualReturnPercent` input to a compounding projection — doing so during implementation produced a nonsensical result (an apparent "111.83% annual return" for a real candidate fund). The simulator therefore reads `annualized5YrReturn` instead, which is a separate, correctly-annualized field on the same underlying `FundReturn` row.
+
+The candidate's management fee (`PeerComparisonRow.avgAnnualManagementFee`) is a public average — distinct from the user's personal `accumulationFeePercent` — and is never presented as a guaranteed/available rate.
+
+**QA fix round (2026-07-16)**: this cumulative-vs-annualized distinction is now explicitly surfaced in the modal UI itself (not just this doc) — a visible note directly under the assumptions table states that the comparison uses the annualized 5-year return while the Similar Tracks table shows the cumulative 5-year return. The fee distinction is also now shown inline: a small caption under each fee value labels it "Your entered fee" (current) or "Reported public average" (candidate).
+
 ## Documentation Impact
 
 If pension/gemel return logic changes, update:
