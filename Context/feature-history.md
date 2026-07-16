@@ -962,6 +962,7 @@ Known Deferred Items (carried forward):
 - All previously-carried-forward known limitations (dev-user stub, `<html lang/dir>` SSR for English routes, product-type inference for `PublicFund`, AUM units, scheduled sync, Managed Savings groups move/cross-group work) remain unchanged and unrelated to this phase.
 
 Branch History:
-- Feature branch: `feature/fund-replacement-simulator`
-- Merged into: `master`
+- Feature branch: `feature/fund-replacement-simulator` (deleted after merge)
+- Merged into: `master` (fast-forward, conflict-free)
 - Commit: `feat: add fund scenario comparison`
+- Commit hash: `4dbaa99de7742adb0fc367e8bfaca19632d8a2ad`
